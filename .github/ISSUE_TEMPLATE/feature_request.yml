@@ -1,0 +1,17 @@
+name: Feature request
+description: Propose an improvement to agent communication.
+body:
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: What communication workflow is difficult today?
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Proposed behavior
+      description: Describe the user-visible result and any alternatives.
+    validations:
+      required: true

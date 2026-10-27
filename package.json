@@ -1,0 +1,85 @@
+{
+  "name": "grok-relay-desktop",
+  "version": "0.1.0-alpha.1",
+  "description": "A small local message bridge between existing Codex and Grok Bot desktop conversations.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "os": [
+    "win32"
+  ],
+  "scripts": {
+    "start": "node launch.cjs",
+    "build:desktop": "pwsh -NoProfile -File scripts/build-desktop.ps1",
+    "panel": "node panel-server.cjs",
+    "test": "node --test tests/*.test.cjs",
+    "bridge": "node bridge.cjs",
+    "format": "prettier --write \"*.cjs\" panel tests docs skills scripts \"*.md\" \"*.json\" .github",
+    "format:check": "prettier --check \"*.cjs\" panel tests docs skills scripts \"*.md\" \"*.json\" .github",
+    "check:release": "node scripts/check-release.cjs"
+  },
+  "optionalDependencies": {
+    "grok-bot-cli": "0.12.4"
+  },
+  "files": [
+    "bridge.cjs",
+    "config.cjs",
+    "codex-desktop-ipc.cjs",
+    "communication-core.cjs",
+    "communication-worker.cjs",
+    "message-format.cjs",
+    "grok-existing-session.cjs",
+    "unprotect-current-user.ps1",
+    "panel-server.cjs",
+    "launch.cjs",
+    "Open GrokRelay.vbs",
+    "panel/",
+    "tests/",
+    "scripts/",
+    "desktop/",
+    "licenses/",
+    "assets.go",
+    "go.mod",
+    "go.sum",
+    "contacts.example.json",
+    "README.md",
+    "CONTRIBUTING.md",
+    "THIRD_PARTY_NOTICES.md",
+    "LICENSE",
+    ".prettierignore",
+    "cli.cjs",
+    "docs/",
+    "skills/",
+    ".github/",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "SECURITY.md",
+    "CODE_OF_CONDUCT.md",
+    ".editorconfig",
+    ".gitattributes"
+  ],
+  "devDependencies": {
+    "prettier": "3.6.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/w-yyh/grok-relay.git"
+  },
+  "homepage": "https://github.com/w-yyh/grok-relay#readme",
+  "bugs": {
+    "url": "https://github.com/w-yyh/grok-relay/issues"
+  },
+  "keywords": [
+    "agents",
+    "codex",
+    "grok-bot",
+    "desktop",
+    "message-relay",
+    "wails",
+    "windows"
+  ],
+  "bin": {
+    "grok-relay": "bridge.cjs"
+  }
+}

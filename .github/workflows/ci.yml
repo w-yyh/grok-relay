@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests (Node ${{ matrix.node }})
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        node: ["22.19.0", "24"]
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-node@v7.1.0
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+      - run: npm ci --ignore-scripts --omit=optional
+      - run: npm test
+      - run: npm run format:check
+      - run: npm run check:release
+
+  build:
+    name: Windows native build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: actions/setup-go@v7.0.0
+        with:
+          go-version: "1.27.3"
+          cache: true
+      - run: go test ./...
+      - run: ./scripts/build-desktop.ps1
+      - name: Check dependency files remain unchanged
+        shell: pwsh
+        run: |
+          git diff --quiet -- go.mod go.sum
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency files changed during build' }
+      - uses: actions/upload-artifact@v7.0.2
+        with:
+          name: grok-relay-windows-preview
+          path: GrokRelay.exe
+          retention-days: 7

@@ -1,0 +1,31 @@
+name: Bug report
+description: Report a reproducible problem using fictional data.
+body:
+  - type: markdown
+    attributes:
+      value: Do not upload tokens, account files, real contact IDs, chat logs, local shortcuts or private screenshots. Use SECURITY.md for a private vulnerability report.
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: GrokRelay, Windows, Node.js, Codex Desktop and Grok Bot versions.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Use fictional contacts and the smallest example that demonstrates the issue.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Include only relevant errors. Never paste entire runtime state or desktop account files.

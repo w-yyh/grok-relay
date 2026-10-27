@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1120" height="300" viewBox="0 0 1120 300" role="img" aria-labelledby="title desc">
+  <title id="title">GrokRelay message flow</title>
+  <desc id="desc">Existing Grok Bot agents exchange explicit messages and replies with existing Codex desktop threads through a local contact directory and queue. No new model session is created.</desc>
+  <rect width="1120" height="300" rx="20" fill="#f4f4f6"/>
+  <g font-family="Arial, sans-serif" text-anchor="middle">
+    <text x="560" y="42" font-size="14" fill="#777984" letter-spacing="2">SAME CONVERSATIONS. A DIRECT LINE.</text>
+    <rect x="42" y="78" width="270" height="142" rx="15" fill="#fff" stroke="#dedee6"/>
+    <text x="177" y="126" font-size="22" font-weight="600" fill="#292a32">Grok Bot</text><text x="177" y="156" font-size="15" fill="#737581">Existing agents</text><text x="177" y="188" font-size="12" fill="#90929c">Original conversation stays visible</text>
+    <rect x="425" y="78" width="270" height="142" rx="15" fill="#292a32"/>
+    <text x="560" y="123" font-size="23" font-weight="600" fill="#fff">GrokRelay</text><text x="560" y="155" font-size="15" fill="#d2d3de">Resolve · Queue · Deliver</text><text x="560" y="187" font-size="12" fill="#b8bbc9">Local relay, explicit messages only</text>
+    <rect x="808" y="78" width="270" height="142" rx="15" fill="#fff" stroke="#dedee6"/>
+    <text x="943" y="126" font-size="22" font-weight="600" fill="#292a32">Codex Desktop</text><text x="943" y="156" font-size="15" fill="#737581">Existing threads</text><text x="943" y="188" font-size="12" fill="#90929c">Original context stays in place</text>
+    <text x="560" y="265" font-size="13" fill="#737581">Send a message. Receive the reply. Keep working where you already are.</text>
+  </g>
+  <g stroke="#777c98" stroke-width="2" fill="none"><path d="M325 137h85m-8-6 8 6-8 6M410 164h-85m8-6-8 6 8 6M708 137h85m-8-6 8 6-8 6M793 164h-85m8-6-8 6 8 6"/></g>
+</svg>

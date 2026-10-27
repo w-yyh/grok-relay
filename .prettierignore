@@ -1,0 +1,11 @@
+node_modules/
+gbot-package/
+state/
+runtime.local.json
+contacts.json
+work/
+tests/panel-fixture-*/
+tests/cli-fixture-*/
+*.ps1
+*.svg
+*.txt

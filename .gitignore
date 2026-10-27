@@ -1,0 +1,17 @@
+# Local identity, conversations and runtime overrides must never be committed.
+contacts.json
+runtime.local.json
+state/
+node_modules/
+gbot-package/
+*.tgz
+*.zip
+*.lnk
+*.log
+*.local.json
+outputs/
+.env*
+work/
+*.exe
+tests/panel-fixture-*/
+tests/cli-fixture-*/

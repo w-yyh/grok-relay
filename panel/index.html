@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>GrokRelay</title>
+    <link rel="stylesheet" href="/style.css" />
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <div class="app">
+      <header>
+        <div class="brand">
+          <span class="brand-icon" aria-hidden="true">⇄</span
+          ><strong>GrokRelay</strong>
+        </div>
+        <div class="header-actions">
+          <button
+            class="icon-button"
+            id="open-window"
+            title="Open main window"
+            aria-label="Open main window"
+          >
+            ↗
+          </button>
+          <button
+            class="icon-button"
+            id="refresh"
+            title="Refresh"
+            aria-label="Refresh"
+          >
+            ↻</button
+          ><button
+            class="icon-button"
+            id="settings-shortcut"
+            title="Settings"
+            aria-label="Settings"
+          >
+            ⚙
+          </button>
+        </div>
+      </header>
+      <nav aria-label="Navigation">
+        <button data-tab="activity" class="selected" aria-current="page">
+          Messages</button
+        ><button data-tab="contacts">
+          Contacts <span id="contact-count">0</span></button
+        ><button data-tab="settings">Settings</button>
+      </nav>
+      <main>
+        <div class="connection-status">
+          <span
+            ><i id="status-dot" class="dot"></i
+            ><span id="connection-label">Connecting…</span></span
+          ><button id="toggle-worker" class="text-button" disabled>
+            Start
+          </button>
+        </div>
+        <section id="activity" class="view">
+          <div class="route-card card">
+            <div class="route-line">
+              <div class="endpoint">
+                <span class="platform-mark codex-mark">C</span
+                ><strong>Codex</strong><small id="codex-count">—</small>
+              </div>
+              <div class="connector">
+                <span></span><b aria-label="Two-way messaging">⇄</b
+                ><span></span>
+              </div>
+              <div class="endpoint">
+                <span class="platform-mark grok-mark">G</span
+                ><strong>Grok Bot</strong><small id="grok-count">—</small>
+              </div>
+            </div>
+            <div class="route-caption">
+              Existing conversations. Both sides visible.
+            </div>
+          </div>
+          <div class="section-heading">
+            <h1>Recent messages <span id="message-count"></span></h1>
+            <button class="primary small" id="compose">
+              Compose <span aria-hidden="true">↗</span>
+            </button>
+          </div>
+          <div class="filters">
+            <label class="search"
+              ><span aria-hidden="true">⌕</span
+              ><input
+                id="message-search"
+                placeholder="Search messages or contacts"
+                aria-label="Search messages or contacts" /></label
+            ><select id="message-filter" aria-label="Message status">
+              <option value="all">All</option>
+              <option value="pending">Pending</option>
+              <option value="problem">Attention</option>
+            </select>
+          </div>
+          <div id="messages" class="card message-list" aria-live="polite">
+            <div class="empty">Loading messages…</div>
+          </div>
+        </section>
+        <section id="contacts" class="view" hidden>
+          <div class="section-heading">
+            <h1>Contacts</h1>
+            <button class="primary small" id="add-contact">
+              Add contact +
+            </button>
+          </div>
+          <p class="subtle intro">
+            Register a contact once. Agents can find it by address.
+          </p>
+          <label class="search full"
+            ><span aria-hidden="true">⌕</span
+            ><input
+              id="contact-search"
+              placeholder="Search name, address or alias"
+              aria-label="Search contacts"
+          /></label>
+          <div id="contact-list" class="card"></div>
+        </section>
+        <section id="settings" class="view" hidden>
+          <div class="section-heading"><h1>Keep communication simple</h1></div>
+          <div class="card settings-card">
+            <div class="setting-row">
+              <div>
+                <strong>Compact messages</strong>
+                <p>Only the sender, message type and body.</p>
+              </div>
+              <span class="enabled">Enabled</span>
+            </div>
+            <label class="setting-row"
+              ><div>
+                <strong>Show service notices</strong>
+                <p>Include setup notices in the message list.</p>
+              </div>
+              <input type="checkbox" id="show-notices" role="switch"
+            /></label>
+            <div class="setting-row">
+              <div>
+                <strong>Background relay</strong>
+                <p>
+                  Keep relaying with the window closed. Pause retains the queue.
+                </p>
+              </div>
+              <button id="restart-worker" class="secondary small">
+                Reconnect
+              </button>
+            </div>
+          </div>
+          <div class="card settings-card">
+            <h2>How agents connect</h2>
+            <p>
+              Ask an agent to contact a registered address. It emits a
+              standalone envelope in its original conversation.
+            </p>
+            <pre>
+[[bridge:send grok:writer]]
+Your message
+[[/bridge]]</pre
+            >
+            <p>
+              Reply normally to an incoming message. To continue after a reply,
+              send a new envelope.
+            </p>
+            <p class="subtle">
+              Only explicit messages are routed. Ordinary chat and quoted
+              examples stay local.
+            </p>
+          </div>
+          <div class="card settings-card">
+            <h2>About GrokRelay <span class="subtle">0.1.0-alpha.1</span></h2>
+            <p>Windows desktop companion · MIT License</p>
+            <p>
+              Connect existing conversations. Each agent keeps its own context
+              and responsibilities. The bridge only delivers messages.
+            </p>
+            <details>
+              <summary>Runtime and compatibility</summary>
+              <p>
+                Both desktop apps must be available. Grok is read about every 30
+                seconds. Busy Codex threads are queued. No startup registration.
+              </p>
+              <p>
+                Adapters use internal desktop interfaces and may break after
+                updates. Text and links only; attachments are not transferred.
+              </p>
+              <p>Local data directory</p>
+              <code id="data-dir"></code>
+            </details>
+          </div>
+        </section>
+      </main>
+      <footer>
+        <span id="last-update">Local connection</span
+        ><span>GrokRelay <span class="footer-dot">·</span> GrokRelay</span>
+        <div class="native-footer">
+          <button id="native-open">Open GrokRelay</button
+          ><button id="native-quit">Quit</button>
+        </div>
+      </footer>
+    </div>
+    <div id="toast" role="status" hidden></div>
+    <dialog id="compose-dialog">
+      <form id="compose-form">
+        <div class="dialog-heading">
+          <h2>Compose</h2>
+          <button type="button" class="close icon-button" aria-label="Close">
+            ×
+          </button>
+        </div>
+        <p class="subtle">
+          Send on behalf of the selected contact. Replies return to its original
+          conversation.
+        </p>
+        <div class="form-grid">
+          <label>From<select id="send-from" required></select></label
+          ><label>To<select id="send-to" required></select></label>
+        </div>
+        <label
+          >Message<textarea
+            id="send-text"
+            rows="6"
+            placeholder="What does the other agent need to know?"
+            required
+            maxlength="50000"
+          ></textarea>
+        </label>
+        <p class="subtle" id="compose-note"></p>
+        <div class="dialog-actions">
+          <button type="button" class="secondary close">Cancel</button
+          ><button type="submit" class="primary">Send message</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="contact-dialog">
+      <form id="contact-form">
+        <div class="dialog-heading">
+          <h2 id="contact-title">Add contact</h2>
+          <button type="button" class="close icon-button" aria-label="Close">
+            ×
+          </button>
+        </div>
+        <input id="edit-id" type="hidden" />
+        <div class="form-grid">
+          <label
+            >Platform<select id="contact-platform">
+              <option value="codex">Codex</option>
+              <option value="grok">Grok Bot</option>
+            </select></label
+          ><label
+            >Display name<input
+              id="contact-name"
+              required
+              placeholder="Example: Website developer"
+          /></label>
+        </div>
+        <label
+          >Address<input
+            id="contact-id"
+            required
+            placeholder="codex:website"
+            pattern="(codex|grok):[a-z0-9-]+" /></label
+        ><label id="thread-label"
+          >Thread link or ID<input
+            id="contact-target"
+            required
+            placeholder="Paste codex://threads/…" /></label
+        ><label id="cwd-label"
+          >Workspace path<input
+            id="contact-cwd"
+            placeholder="C:\Projects\website" /></label
+        ><label
+          >Aliases <span class="subtle">Optional, comma-separated</span
+          ><input id="contact-aliases" placeholder="website, developer"
+        /></label>
+        <p class="subtle">
+          Saving reconnects the bridge. First registration starts with new
+          messages only. Introduce the address and envelope format to both
+          agents.
+        </p>
+        <div class="dialog-actions">
+          <button id="delete-contact" type="button" class="danger" hidden>
+            Remove contact</button
+          ><button type="button" class="secondary close">Cancel</button
+          ><button type="submit" class="primary">Save contact</button>
+        </div>
+      </form>
+    </dialog>
+    <dialog id="message-dialog">
+      <div class="dialog-heading">
+        <h2 id="detail-title">Message</h2>
+        <button type="button" class="close icon-button" aria-label="Close">
+          ×
+        </button>
+      </div>
+      <p id="detail-meta" class="subtle"></p>
+      <div id="detail-body" class="message-body"></div>
+      <p id="detail-error" class="error-text" hidden></p>
+      <div class="dialog-actions">
+        <button id="detail-copy" class="secondary">Copy message</button
+        ><button class="primary close">Done</button>
+      </div>
+    </dialog>
+  </body>
+</html>
