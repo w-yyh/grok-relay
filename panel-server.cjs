@@ -13,6 +13,18 @@ const {
 } = require("./config.cjs");
 const { displayName } = require("./message-format.cjs");
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+function readPreferences() {
+  const file = path.join(stateDir, "preferences.json");
+  return fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, "utf8")) : {};
+}
+function savePreferences(changes) {
+  const preferences = { ...readPreferences(), ...changes };
+  fs.mkdirSync(stateDir, { recursive: true });
+  const file = path.join(stateDir, "preferences.json");
+  fs.writeFileSync(file + ".tmp", JSON.stringify(preferences));
+  fs.renameSync(file + ".tmp", file);
+  return preferences;
+}
 function readState() {
   const file = path.join(stateDir, "communication.json");
   return fs.existsSync(file)
@@ -59,6 +71,7 @@ function snapshot() {
   return {
     app: "GrokRelay",
     version: require("./package.json").version,
+    language: readPreferences().language === "zh-CN" ? "zh-CN" : "en",
     running: !!workerPid(),
     updatedAt: state.updatedAt,
     contacts,
@@ -76,6 +89,7 @@ function snapshot() {
         deliveredAt: j.deliveredAt,
         error: j.error,
         replyTo: j.replyTo,
+        waitReason: j.waitReason,
       })),
     dataDir,
     pollSeconds: 30,
@@ -159,14 +173,15 @@ function createServer() {
           });
         changing = true;
         try {
+          if (url.pathname === "/api/preferences") {
+            if (!["en", "zh-CN"].includes(value.language))
+              throw Error("Unsupported language");
+            return answer(200, savePreferences({ language: value.language }));
+          }
           if (url.pathname === "/api/control") {
             await control(value.action);
             if (value.remember !== false) {
-              fs.mkdirSync(stateDir, { recursive: true });
-              fs.writeFileSync(
-                path.join(stateDir, "preferences.json"),
-                JSON.stringify({ paused: value.action === "stop" }),
-              );
+              savePreferences({ paused: value.action === "stop" });
             }
             return answer(200, snapshot());
           }
@@ -205,6 +220,8 @@ function createServer() {
       const files = {
         "/": ["index.html", "text/html"],
         "/app.js": ["app.js", "text/javascript"],
+        "/i18n.js": ["i18n.js", "text/javascript"],
+        "/logo.svg": ["logo.svg", "image/svg+xml"],
         "/style.css": ["style.css", "text/css"],
       };
       if (req.method !== "GET" || !files[url.pathname])
