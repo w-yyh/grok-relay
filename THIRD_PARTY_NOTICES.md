@@ -9,4 +9,6 @@
 
 Dependencies retain their upstream licenses. The magpie license is reproduced in `licenses/magpie-MIT.txt`; its branding, artwork and business backend are not included. The application code and conceptual flow graphic are original to this project.
 
+`licenses/` also includes the license texts for the Go runtime and modules linked into the Windows host: Wails, xdg, go-ole, go-colorable, go-isatty and golang.org/x/sys. CI preview artifacts include these notices alongside the executable. Preserve them when redistributing a native build.
+
 Codex Desktop, Grok Bot and WebView2 are external applications or runtimes installed by the user. They are not bundled or represented as endorsing GrokRelay.

@@ -50,5 +50,9 @@ jobs:
       - uses: actions/upload-artifact@v7.0.2
         with:
           name: grok-relay-windows-preview
-          path: GrokRelay.exe
+          path: |
+            GrokRelay.exe
+            LICENSE
+            THIRD_PARTY_NOTICES.md
+            licenses/
           retention-days: 7
