@@ -35,7 +35,9 @@ function check(denylist = []) {
   const files = sourceFiles();
   for (const file of files) {
     if (/\.(png|ico|webp)$/i.test(file)) continue;
-    const text = fs.readFileSync(path.join(root, file), "utf8");
+    const text = fs
+      .readFileSync(path.join(root, file), "utf8")
+      .replaceAll("\\\\", "\\");
     if (/[A-Z]:[\\/]Users[\\/](?!Public[\\/])[^\s\\/"'<>]+/i.test(text))
       throw Error("Personal Windows path in " + file);
     if (

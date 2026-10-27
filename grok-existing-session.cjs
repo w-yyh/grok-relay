@@ -110,14 +110,9 @@ async function grok(args) {
   );
 }
 module.exports = { grok };
-if (require.main === module)
-  grok(["bots", "list", "--gateway"])
-    .then((r) => {
-      if (Array.isArray(r))
-        console.log(JSON.stringify(r.map((b) => ({ id: b.id, name: b.name }))));
-      else console.log(JSON.stringify({ keys: Object.keys(r), result: r }));
-    })
-    .catch((e) => {
-      console.error(e.message);
-      process.exitCode = 1;
-    });
+if (require.main === module) {
+  console.error(
+    "Use node bridge.cjs discover grok --json for a filtered contact listing.",
+  );
+  process.exitCode = 1;
+}
