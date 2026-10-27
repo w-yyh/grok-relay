@@ -31,27 +31,28 @@ function sourceFiles() {
     visit(entry);
   return [...files].sort();
 }
+function checkText(input, file, denylist = []) {
+  const text = input.replaceAll("\\\\", "\\");
+  if (/[A-Z]:[\\/]Users[\\/](?!Public[\\/])[^\s\\/"'<>]+/i.test(text))
+    throw Error("Personal Windows path in " + file);
+  if (
+    /\b(?:ghp_|gho_|github_pat_)[A-Za-z0-9_]{25,}\b/.test(text) ||
+    /-----BEGIN (?:RSA |OPENSSH |EC )?PRIVATE KEY-----/.test(text)
+  )
+    throw Error("Possible credential in " + file);
+  if (
+    denylist.some(
+      (value) =>
+        value && text.toLowerCase().includes(String(value).toLowerCase()),
+    )
+  )
+    throw Error("Private identifier in " + file);
+}
 function check(denylist = []) {
   const files = sourceFiles();
   for (const file of files) {
     if (/\.(png|ico|webp)$/i.test(file)) continue;
-    const text = fs
-      .readFileSync(path.join(root, file), "utf8")
-      .replaceAll("\\\\", "\\");
-    if (/[A-Z]:[\\/]Users[\\/](?!Public[\\/])[^\s\\/"'<>]+/i.test(text))
-      throw Error("Personal Windows path in " + file);
-    if (
-      /\b(?:ghp_|gho_|github_pat_)[A-Za-z0-9_]{25,}\b/.test(text) ||
-      /-----BEGIN (?:RSA |OPENSSH |EC )?PRIVATE KEY-----/.test(text)
-    )
-      throw Error("Possible credential in " + file);
-    if (
-      denylist.some(
-        (value) =>
-          value && text.toLowerCase().includes(String(value).toLowerCase()),
-      )
-    )
-      throw Error("Private identifier in " + file);
+    checkText(fs.readFileSync(path.join(root, file), "utf8"), file, denylist);
   }
   const example = JSON.parse(
     fs.readFileSync(path.join(root, "contacts.example.json"), "utf8"),
@@ -71,4 +72,4 @@ if (require.main === module) {
     process.exitCode = 1;
   }
 }
-module.exports = { sourceFiles, check };
+module.exports = { sourceFiles, check, checkText };
