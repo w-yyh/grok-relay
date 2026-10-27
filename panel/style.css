@@ -50,7 +50,8 @@ body.tray .brand {
   font-size: 18px;
 }
 body.tray .brand-icon {
-  font-size: 24px;
+  width: 28px;
+  height: 28px;
 }
 body.tray .header-actions {
   gap: 1px;
@@ -245,9 +246,18 @@ header {
   font-weight: 650;
 }
 .brand-icon {
-  font-size: 28px;
-  line-height: 1;
-  transform: rotate(-12deg);
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+#language {
+  min-width: 112px;
+  width: auto;
+}
+#contact-count,
+#message-count {
+  margin-left: 0.35em;
 }
 .header-actions {
   display: flex;

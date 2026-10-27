@@ -80,3 +80,41 @@ test("reply request is correlated, preventing normal acknowledgments from becomi
   assert.equal(jobs[0].requestId, "r");
   assert.equal(jobs[0].status, "delivered");
 });
+test("group posts without request IDs correlate only replies in the same turn", () => {
+  const {
+    reconcileIdentities,
+    matchesReply,
+  } = require("../message-format.cjs");
+  const at = "2026-01-01T00:00:00.000Z";
+  const job = {
+    id: "group-test",
+    to: "grok:team",
+    kind: "message",
+    attemptedAt: at,
+    wireText: "Writer · Message\n\nPlease review.",
+    status: "waiting_identity",
+  };
+  const entry = {
+    id: "t12u",
+    kind: "message",
+    timestampMs: Date.parse(at),
+    clientNonce: "fictional",
+    content: job.wireText,
+  };
+  assert.deepEqual(reconcileIdentities([job], "grok:team", [entry]), []);
+  assert.deepEqual(reconcileIdentities([job], "grok:team", [entry], true), [
+    "group-test",
+  ]);
+  assert.equal(job.status, "waiting_reply");
+  assert.equal(
+    matchesReply(job, {
+      id: "t12s4",
+      kind: "send-message",
+      requestId: "post:fictional",
+    }),
+    true,
+  );
+  assert.equal(matchesReply(job, { id: "t13s4", kind: "send-message" }), false);
+  assert.equal(matchesReply(job, { id: "t12u", kind: "message" }), false);
+  assert.deepEqual(reconcileIdentities([job], "grok:team", [entry], true), []);
+});

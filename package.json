@@ -40,6 +40,7 @@
     "desktop/",
     "licenses/",
     "assets.go",
+    "assets/",
     "go.mod",
     "go.sum",
     "contacts.example.json",

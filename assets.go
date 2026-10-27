@@ -6,3 +6,7 @@ import "embed"
 //
 //go:embed panel/*
 var Panel embed.FS
+
+// Icon is derived from the same source as panel/logo.svg and the Windows ICO.
+//go:embed assets/icon.png
+var Icon []byte

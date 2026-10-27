@@ -45,6 +45,7 @@ function metadata(job) {
     deliveredAt,
     answeredAt,
     replyTo,
+    waitReason,
   } = job;
   return {
     id,
@@ -57,6 +58,7 @@ function metadata(job) {
     deliveredAt,
     answeredAt,
     replyTo,
+    waitReason,
   };
 }
 function parseOptions(args) {
@@ -117,7 +119,7 @@ async function run(args = process.argv.slice(2)) {
   const output = (value) => console.log(JSON.stringify(value, null, 2));
   if (!command || ["help", "--help", "-h"].includes(command)) {
     console.log(
-      `GrokRelay ${version}\n\nUsage: node bridge.cjs <command> [options]\n\n  init --file FILE                 Register an initial contact configuration\n  contacts [--query TEXT] [--json] Find registered recipients\n  discover grok [--json]           List Grok Bot IDs and names\n  doctor [--json]                  Check local prerequisites without reading tokens\n  start | stop | status           Control the relay; JSON output\n  send --to ADDRESS [--from ADDRESS] --file FILE\n  send --to ADDRESS [--from ADDRESS] --message TEXT\n  message --id ID [--include-text] Inspect one message and its replies\n\nOnly explicit messages are forwarded. See docs/AGENT_GUIDE.md.`,
+      `GrokRelay ${version}\n\nUsage: node bridge.cjs <command> [options]\n\n  init --file FILE                 Register an initial contact configuration\n  contacts [--query TEXT] [--json] Find registered recipients\n  discover grok | groups [--json]  List Grok Bot or group IDs and names\n  doctor [--json]                  Check local prerequisites without reading tokens\n  start | stop | status           Control the relay; JSON output\n  send --to ADDRESS [--from ADDRESS] --file FILE\n  send --to ADDRESS [--from ADDRESS] --message TEXT\n  message --id ID [--include-text] Inspect one message and its replies\n\nOnly explicit messages are forwarded. See docs/AGENT_GUIDE.md.`,
     );
     return;
   }
@@ -138,29 +140,36 @@ async function run(args = process.argv.slice(2)) {
     );
     if (options.json)
       output(
-        rows.map(({ id, name, aliases, description }) => ({
-          id,
-          name,
-          aliases,
-          description,
+        rows.map((c) => ({
+          id: c.id,
+          name: c.name,
+          aliases: c.aliases,
+          description: c.description,
+          kind: c.threadId ? "thread" : c.kind || "bot",
         })),
       );
     else console.log(directory(options.query || ""));
     return;
   }
   if (command === "discover") {
-    if (discover !== "grok")
+    if (!["grok", "groups"].includes(discover))
       throw Error(
-        "Only discover grok is supported. Copy Codex thread links from the desktop app.",
+        "Use discover grok or discover groups. Copy Codex thread links from the desktop app.",
       );
     const result = await require("./grok-existing-session.cjs").grok([
-      "bots",
+      discover === "groups" ? "groups" : "bots",
       "list",
       "--gateway",
     ]);
     if (!Array.isArray(result))
       throw Error("Unexpected bot-list response; adapter update required");
-    output(result.map((b) => ({ botId: b.id, name: b.name })));
+    output(
+      result.map((b) => ({
+        botId: b.id,
+        name: b.name,
+        kind: discover === "groups" ? "group" : "bot",
+      })),
+    );
     return;
   }
   if (command === "doctor") {

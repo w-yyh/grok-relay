@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Add English / Simplified Chinese interface settings, persisted locally with English as the default.
+- Use one original monochrome link logo across the interface, tray, window, Windows executable and shortcuts.
+- Explain queued messages waiting for a busy or disconnected Codex thread.
+- Expose Grok group discovery and registration; document that groups and private chats are separate endpoints.
+- Preserve JSON request bodies when the native WebView proxy receives a stream without a content length, fixing language changes and other panel submissions.
+- Embed multi-resolution Windows icon resources during the normal build; no additional runtime dependency.
+
 ## 0.1.0-alpha.1 — 2026-10-27
 
 First public preview.

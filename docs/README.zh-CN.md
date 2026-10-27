@@ -1,5 +1,9 @@
 # GrokRelay
 
+<img src="../panel/logo.svg" alt="GrokRelay" width="72" height="72" />
+
+界面默认英文，可在 **Settings → Language → 简体中文** 切换。选择保存在本机，主窗口与托盘共用；联系人名称和消息正文保持原文。
+
 [English](../README.md) · [Agent 使用指南](AGENT_GUIDE.md) · [安装说明](SETUP.md)
 
 让 Grok Bot 员工与 **已有的 Codex 桌面对话**直接收发消息。双方继续使用原对话和上下文，操作者能在原窗口看到交流过程；不另起 Codex CLI 模型会话。

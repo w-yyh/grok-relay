@@ -86,3 +86,53 @@ test("ambiguous contact aliases are rejected", () => {
     /Duplicate/,
   );
 });
+
+test("language is persisted without changing pause state or user content", async () => {
+  const server = createServer();
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const url = "http://127.0.0.1:" + server.address().port;
+  const post = (route, value) =>
+    fetch(url + route, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(value),
+    });
+  try {
+    assert.equal(
+      (await (await fetch(url + "/api/status")).json()).language,
+      "en",
+    );
+    await post("/api/control", { action: "stop" });
+    const saved = await (
+      await post("/api/preferences", { language: "zh-CN" })
+    ).json();
+    assert.equal(saved.paused, true);
+    assert.equal(saved.language, "zh-CN");
+    await post("/api/control", { action: "stop" });
+    const state = await (await fetch(url + "/api/status")).json();
+    assert.equal(state.language, "zh-CN");
+    assert.equal(state.running, false);
+    assert.equal(state.contacts[0].name, "A");
+    assert.equal(
+      (await post("/api/preferences", { language: "de" })).status,
+      400,
+    );
+    assert.equal(
+      (await (await fetch(url + "/api/status")).json()).language,
+      "zh-CN",
+    );
+    assert.equal(
+      JSON.parse(
+        fs.readFileSync(path.join(temp, "state/preferences.json"), "utf8"),
+      ).language,
+      "zh-CN",
+    );
+    assert.equal((await fetch(url + "/i18n.js")).status, 200);
+    assert.equal(
+      (await fetch(url + "/logo.svg")).headers.get("content-type"),
+      "image/svg+xml; charset=utf-8",
+    );
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});

@@ -13,7 +13,11 @@ const {
   finalOf,
   DesktopConnection,
 } = require("./communication-core.cjs");
-const { formatMessage, reconcileIdentities } = require("./message-format.cjs");
+const {
+  formatMessage,
+  reconcileIdentities,
+  matchesReply,
+} = require("./message-format.cjs");
 const root = require("./config.cjs").stateDir;
 fs.mkdirSync(root, { recursive: true });
 const statePath = path.join(root, "communication.json"),
@@ -225,9 +229,16 @@ async function flush() {
       const to = findContact(job.to);
       if (to.threadId) {
         const d = desktops.get(to.id);
-        if (!d || d.problem || d.state?.threadRuntimeStatus?.type !== "idle")
+        if (!d || d.problem) {
+          job.waitReason = "recipient_unavailable";
           continue;
+        }
+        if (d.state?.threadRuntimeStatus?.type !== "idle") {
+          job.waitReason = "recipient_busy";
+          continue;
+        }
       }
+      delete job.waitReason;
       job.status = "sending";
       job.attemptedAt = new Date().toISOString();
       job.wireText = messageText(job);
@@ -298,15 +309,19 @@ async function pollGrok(contact) {
       save();
       return;
     }
-    for (const id of reconcileIdentities(state.jobs, contact.id, entries)) {
+    for (const id of reconcileIdentities(
+      state.jobs,
+      contact.id,
+      entries,
+      contact.kind === "group",
+    )) {
       log("grok_identity_confirmed", { id });
       save();
     }
     for (const e of entries) {
       const text = e.message?.content;
       const incoming = state.jobs.find(
-        (j) =>
-          j.to === contact.id && j.requestId && j.requestId === e.requestId,
+        (j) => j.to === contact.id && matchesReply(j, e),
       );
       const recoverReply =
         incoming?.kind === "message" &&

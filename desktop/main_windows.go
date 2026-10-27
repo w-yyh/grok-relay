@@ -9,9 +9,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"image"
-	"image/color"
-	"image/png"
 	"io/fs"
 	"log"
 	"net/http"
@@ -131,22 +128,7 @@ func (b *backend) control(action string, remember bool) {
 }
 
 func trayIcon() []byte {
-	// Two linked blocks: an original, legible monochrome communications mark.
-	img := image.NewNRGBA(image.Rect(0, 0, 32, 32))
-	ink := color.NRGBA{R: 76, G: 81, B: 128, A: 255}
-	for y := 5; y < 27; y++ {
-		for x := 3; x < 29; x++ {
-			left := x < 13 && (x < 7 || y < 9 || y >= 23)
-			right := x >= 19 && (x >= 25 || y < 9 || y >= 23)
-			link := x >= 10 && x < 22 && y >= 14 && y < 18
-			if left || right || link {
-				img.SetNRGBA(x, y, ink)
-			}
-		}
-	}
-	var buf bytes.Buffer
-	_ = png.Encode(&buf, img)
-	return buf.Bytes()
+	return ui.Icon
 }
 
 func run() error {
@@ -163,6 +145,13 @@ func run() error {
 	}
 	defer logfile.Close()
 	log.SetOutput(logfile)
+	var preferences struct {
+		Paused   bool   `json:"paused"`
+		Language string `json:"language"`
+	}
+	if b, e := os.ReadFile(filepath.Join(backend.data, "state", "preferences.json")); e == nil {
+		_ = json.Unmarshal(b, &preferences)
+	}
 
 	var app *application.App
 	var panel, main *application.WebviewWindow
@@ -171,6 +160,7 @@ func run() error {
 	ready := make(chan struct{})
 	var readyOnce sync.Once
 	var makeMain func(string)
+	var setMenuLanguage func(string)
 	showMain := func(view string) {
 		application.InvokeAsync(func() {
 			if panel != nil {
@@ -202,6 +192,10 @@ func run() error {
 	}
 	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasPrefix(r.URL.Path, "/api/") {
+			if err := prepareProxyBody(r); err != nil {
+				http.Error(w, "Cannot read request body", http.StatusBadRequest)
+				return
+			}
 			proxy.ServeHTTP(w, r)
 			return
 		}
@@ -212,6 +206,13 @@ func run() error {
 			}
 			w.Header().Set("Content-Type", "application/json")
 			switch r.URL.Path {
+			case "/native/language":
+				language := r.URL.Query().Get("value")
+				if language != "en" && language != "zh-CN" {
+					http.Error(w, "Unsupported language", 400)
+					return
+				}
+				application.InvokeAsync(func() { setMenuLanguage(language) })
 			case "/native/main":
 				showMain(r.URL.Query().Get("view"))
 			case "/native/hide":
@@ -313,10 +314,22 @@ func run() error {
 	tray = app.SystemTray.New()
 	tray.SetIcon(trayIcon()).SetTooltip("GrokRelay")
 	menu := app.NewMenu()
-	menu.Add("Open GrokRelay").OnClick(func(*application.Context) { showMain("activity") })
-	menu.Add("Contacts").OnClick(func(*application.Context) { showMain("contacts") })
+	openItem := menu.Add("Open GrokRelay").OnClick(func(*application.Context) { showMain("activity") })
+	contactsItem := menu.Add("Contacts").OnClick(func(*application.Context) { showMain("contacts") })
 	menu.AddSeparator()
-	menu.Add("Quit GrokRelay").OnClick(func(*application.Context) { go func() { backend.control("stop", false); app.Quit() }() })
+	quitItem := menu.Add("Quit GrokRelay").OnClick(func(*application.Context) { go func() { backend.control("stop", false); app.Quit() }() })
+	setMenuLanguage = func(language string) {
+		if language == "zh-CN" {
+			openItem.SetLabel("打开 GrokRelay")
+			contactsItem.SetLabel("联系人")
+			quitItem.SetLabel("退出 GrokRelay")
+		} else {
+			openItem.SetLabel("Open GrokRelay")
+			contactsItem.SetLabel("Contacts")
+			quitItem.SetLabel("Quit GrokRelay")
+		}
+	}
+	setMenuLanguage(preferences.Language)
 	tray.SetMenu(menu)
 	tray.OnClick(func() {
 		application.InvokeAsync(func() {
@@ -346,12 +359,6 @@ func run() error {
 	})
 	if err = backend.start(); err != nil {
 		return err
-	}
-	var preferences struct {
-		Paused bool `json:"paused"`
-	}
-	if b, e := os.ReadFile(filepath.Join(backend.data, "state", "preferences.json")); e == nil {
-		_ = json.Unmarshal(b, &preferences)
 	}
 	if !preferences.Paused {
 		go backend.control("start", false)

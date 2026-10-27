@@ -1,5 +1,23 @@
 "use strict";
 const $ = (selector) => document.querySelector(selector);
+let language = GrokRelayI18n.normalize(localStorage.getItem("language"));
+const t = (key, values) => GrokRelayI18n.translate(language, key, values);
+function applyLanguage(value) {
+  language = GrokRelayI18n.normalize(value);
+  document.documentElement.lang = language;
+  localStorage.setItem("language", language);
+  document.querySelectorAll("[data-i18n]").forEach((el) => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  for (const attr of ["title", "aria-label", "placeholder"]) {
+    document
+      .querySelectorAll("[data-i18n-" + attr + "]")
+      .forEach((el) =>
+        el.setAttribute(attr, t(el.getAttribute("data-i18n-" + attr))),
+      );
+  }
+  $("#language").value = language;
+}
 const viewParams = new URLSearchParams(location.search);
 const isNative = viewParams.get("native") === "1";
 const isTray = isNative && viewParams.get("mode") === "tray";
@@ -7,7 +25,7 @@ document.body.classList.toggle("native", isNative);
 document.body.classList.toggle("tray", isTray);
 function openNative(view = "activity") {
   return api("/native/main?view=" + encodeURIComponent(view), {}).catch((e) =>
-    toast(e.message),
+    toast(t(e.message)),
   );
 }
 let data = null,
@@ -39,6 +57,16 @@ const labels = {
   interrupted: "Interrupted",
   completed_without_text: "No text reply",
 };
+function statusLabel(job) {
+  if (job.status === "queued") {
+    if (!data.running) return t("Paused — message saved");
+    if (job.waitReason === "recipient_busy")
+      return t("Waiting for Codex to finish");
+    if (job.waitReason === "recipient_unavailable")
+      return t("Waiting for Codex connection");
+  }
+  return t(labels[job.status] || job.status);
+}
 const escape = (value) =>
   String(value ?? "").replace(
     /[&<>"']/g,
@@ -53,7 +81,7 @@ const name = (id) =>
 const icon = (id) =>
   `<span class="platform-mark ${id.startsWith("codex:") ? "codex-mark" : "grok-mark"}">${id === "bridge" ? "⇄" : id.startsWith("codex:") ? "C" : "G"}</span>`;
 const time = (value) =>
-  new Date(value).toLocaleTimeString(undefined, {
+  new Date(value).toLocaleTimeString(language, {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -75,7 +103,7 @@ async function api(url, value) {
         },
   );
   const result = await response.json();
-  if (!response.ok) throw Error(result.error || "Request failed");
+  if (!response.ok) throw Error(result.error || t("Request failed"));
   return result;
 }
 function switchTab(id) {
@@ -114,10 +142,10 @@ function renderMessages() {
     ? jobs
         .map(
           (j) =>
-            `<button class="message-row" data-message="${escape(j.id)}"><div class="message-top">${icon(j.from)}<strong>${escape(name(j.from))}</strong><time title="${escape(new Date(j.createdAt).toLocaleString())}">${time(j.createdAt)}</time></div><div class="message-preview">${escape(j.text)}</div><div class="message-bottom"><span class="recipient">${j.kind === "reply" ? "↩" : "→"} ${escape(name(j.to))}</span><span class="status ${problems.has(j.status) ? "bad" : pending.has(j.status) ? "waiting" : ""}">${labels[j.status] || escape(j.status)}</span></div></button>`,
+            `<button class="message-row" data-message="${escape(j.id)}"><div class="message-top">${icon(j.from)}<strong>${escape(name(j.from))}</strong><time title="${escape(new Date(j.createdAt).toLocaleString(language))}">${time(j.createdAt)}</time></div><div class="message-preview">${escape(j.text)}</div><div class="message-bottom"><span class="recipient">${j.kind === "reply" ? "↩" : "→"} ${escape(name(j.to))}</span><span class="status ${problems.has(j.status) ? "bad" : pending.has(j.status) ? "waiting" : ""}">${escape(statusLabel(j))}</span></div></button>`,
         )
         .join("")
-    : '<div class="empty"><strong>No messages yet</strong>Messages between your agents will appear here.</div>';
+    : `<div class="empty"><strong>${t("No messages yet")}</strong>${t("Messages between your agents will appear here.")}</div>`;
   updateList("#messages", html);
 }
 function renderContacts() {
@@ -136,14 +164,17 @@ function renderContacts() {
             group
               .map(
                 (c) =>
-                  `<div class="contact-row">${icon(c.id)}<div class="contact-copy"><strong title="${escape(c.name)}">${escape(c.shortName)}</strong><small><i class="dot ${data.running && c.route.status === "online" ? "online" : ""}"></i> <code>${escape(c.id)}</code></small></div><div class="contact-actions"><button data-copy="${escape(c.id)}">Copy address</button><button data-edit="${escape(c.id)}">Edit</button></div></div>`,
+                  `<div class="contact-row">${icon(c.id)}<div class="contact-copy"><strong title="${escape(c.name)}">${escape(c.shortName)}</strong><small><i class="dot ${data.running && c.route.status === "online" ? "online" : ""}"></i> <code>${escape(c.id)}</code></small></div><div class="contact-actions"><button data-copy="${escape(c.id)}">${t("Copy address")}</button><button data-edit="${escape(c.id)}">${t("Edit")}</button></div></div>`,
               )
               .join("")
           );
         })
         .join("")
-    : '<div class="empty"><strong>Add your first contact</strong>Connect an existing thread or bot.</div>';
+    : `<div class="empty"><strong>${t("Add your first contact")}</strong>${t("Connect an existing thread or bot.")}</div>`;
   updateList("#contact-list", html);
+}
+function countLabel(count, noun) {
+  return t("{count} " + noun + (count === 1 ? "" : "s"), { count });
 }
 function render() {
   const online = data.contacts.filter(
@@ -151,12 +182,15 @@ function render() {
   ).length;
   $("#contact-count").textContent = data.contacts.length;
   $("#connection-label").textContent = busy
-    ? "Updating connection…"
+    ? t("Updating connection…")
     : !data.running
-      ? "Bridge paused"
+      ? t("Bridge paused")
       : !data.contacts.length
-        ? "Add contacts to get started"
-        : `${online} / ${data.contacts.length} contacts connected`;
+        ? t("Add contacts to get started")
+        : t("{online} / {total} contacts connected", {
+            online,
+            total: data.contacts.length,
+          });
   $("#status-dot").className =
     "dot " +
     (data.running
@@ -164,17 +198,31 @@ function render() {
         ? "online"
         : "problem"
       : "");
-  $("#toggle-worker").textContent = data.running ? "Pause" : "Start";
+  $("#toggle-worker").textContent = data.running ? t("Pause") : t("Start");
   $("#toggle-worker").disabled = busy;
   $("#restart-worker").disabled = busy;
   $("#compose").disabled = data.contacts.length < 2;
-  $("#codex-count").textContent =
-    data.contacts.filter((c) => c.platform === "Codex").length + " threads";
+  $("#codex-count").textContent = countLabel(
+    data.contacts.filter((c) => c.platform === "Codex").length,
+    "thread",
+  );
   $("#grok-count").textContent =
-    data.contacts.filter((c) => c.platform === "Grok Bot").length + " agents";
+    countLabel(
+      data.contacts.filter(
+        (c) => c.platform === "Grok Bot" && c.kind !== "group",
+      ).length,
+      "agent",
+    ) +
+    (data.contacts.some((c) => c.kind === "group")
+      ? " · " +
+        countLabel(
+          data.contacts.filter((c) => c.kind === "group").length,
+          "group",
+        )
+      : "");
   $("#last-update").textContent = data.updatedAt
-    ? "Updated " + time(data.updatedAt)
-    : "Local only";
+    ? t("Updated {time}", { time: time(data.updatedAt) })
+    : t("Local only");
   $("#data-dir").textContent = data.dataDir;
   renderMessages();
   renderContacts();
@@ -185,9 +233,10 @@ async function refresh() {
   refreshing = true;
   try {
     data = await api("/api/status");
+    if (language !== data.language) applyLanguage(data.language);
     render();
   } catch {
-    $("#connection-label").textContent = "Panel disconnected";
+    $("#connection-label").textContent = t("Panel disconnected");
     $("#status-dot").className = "dot problem";
     $("#toggle-worker").disabled = true;
     $("#compose").disabled = true;
@@ -202,11 +251,11 @@ async function changeWorker(action) {
     data = await api("/api/control", { action });
     toast(
       action === "stop"
-        ? "Paused. Queued messages are retained."
-        : "Bridge started",
+        ? t("Paused. Queued messages are retained.")
+        : t("Bridge started"),
     );
   } catch (e) {
-    toast(e.message);
+    toast(t(e.message));
   } finally {
     busy = false;
     await refresh();
@@ -215,14 +264,32 @@ async function changeWorker(action) {
 async function copy(text) {
   try {
     await navigator.clipboard.writeText(text);
-    toast("Copied");
+    toast(t("Copied"));
   } catch {
-    toast("Copy failed. Select the text manually.");
+    toast(t("Copy failed. Select the text manually."));
   }
 }
 document
   .querySelectorAll("[data-tab]")
   .forEach((el) => (el.onclick = () => switchTab(el.dataset.tab)));
+$("#language").onchange = async () => {
+  const select = $("#language");
+  select.disabled = true;
+  try {
+    const saved = await api("/api/preferences", { language: select.value });
+    applyLanguage(saved.language);
+    if (data) render();
+    if (isNative)
+      await api("/native/language?value=" + encodeURIComponent(language), {});
+    toast(t("Language saved"));
+  } catch (e) {
+    select.value = language;
+    toast(t(e.message));
+  } finally {
+    select.disabled = false;
+  }
+};
+applyLanguage(language);
 $("#settings-shortcut").onclick = () => switchTab("settings");
 $("#open-window").onclick = () =>
   isNative
@@ -231,9 +298,9 @@ $("#open-window").onclick = () =>
 $("#native-open").onclick = () => openNative();
 $("#native-quit").onclick = () => {
   $("#native-quit").disabled = true;
-  $("#native-quit").textContent = "Quitting…";
+  $("#native-quit").textContent = t("Quitting…");
   api("/native/quit", {}).catch((e) => {
-    toast(e.message);
+    toast(t(e.message));
     $("#native-quit").disabled = false;
   });
 };
@@ -267,9 +334,9 @@ function showMessage(id) {
   $("#detail-title").textContent =
     `${name(activeMessage.from)} → ${name(activeMessage.to)}`;
   $("#detail-meta").textContent =
-    new Date(activeMessage.createdAt).toLocaleString() +
+    new Date(activeMessage.createdAt).toLocaleString(language) +
     " · " +
-    (labels[activeMessage.status] || activeMessage.status);
+    statusLabel(activeMessage);
   $("#detail-body").textContent = activeMessage.text;
   $("#detail-error").textContent = activeMessage.error || "";
   $("#detail-error").hidden = !activeMessage.error;
@@ -294,8 +361,8 @@ $("#compose").onclick = () => {
     (c) => c.platform === "Grok Bot",
   );
   $("#compose-note").textContent = data.running
-    ? "Busy threads are queued. Replies return automatically."
-    : "Paused. This message will wait until the bridge is started.";
+    ? t("Busy threads are queued. Replies return automatically.")
+    : t("Paused. This message will wait until the bridge is started.");
   $("#compose-dialog").showModal();
 };
 $("#compose-form").onsubmit = async (event) => {
@@ -311,22 +378,27 @@ $("#compose-form").onsubmit = async (event) => {
     $("#compose-dialog").close();
     $("#send-text").value = "";
     localStorage.removeItem("message-draft");
-    toast("Message queued");
+    toast(t("Message queued"));
     await refresh();
   } catch (e) {
-    toast(e.message);
+    toast(t(e.message));
   } finally {
     button.disabled = false;
   }
 };
 function platformFields() {
   const codex = $("#contact-platform").value === "codex";
-  $("#thread-label").firstChild.textContent = codex
-    ? "Thread link or ID"
-    : "Bot ID";
+  const group = $("#contact-platform").value === "grok-group";
+  $("#thread-label [data-i18n]").textContent = codex
+    ? t("Thread link or ID")
+    : group
+      ? t("Group ID")
+      : t("Bot ID");
   $("#contact-target").placeholder = codex
-    ? "Paste codex://threads/…"
-    : "Paste a Grok Bot ID";
+    ? t("Paste codex://threads/…")
+    : group
+      ? t("Paste a Grok group ID")
+      : t("Paste a Grok Bot ID");
   $("#cwd-label").hidden = !codex;
   $("#contact-cwd").required = codex;
   if (!$("#edit-id").value) $("#contact-id").value = codex ? "codex:" : "grok:";
@@ -339,8 +411,13 @@ function editContact(id) {
   $("#contact-form").reset();
   const c = id ? contact(id) : null;
   $("#edit-id").value = id || "";
-  $("#contact-title").textContent = c ? "Edit contact" : "Add contact";
-  $("#contact-platform").value = c?.platform === "Grok Bot" ? "grok" : "codex";
+  $("#contact-title").textContent = c ? t("Edit contact") : t("Add contact");
+  $("#contact-platform").value =
+    c?.kind === "group"
+      ? "grok-group"
+      : c?.platform === "Grok Bot"
+        ? "grok"
+        : "codex";
   $("#contact-platform").disabled = !!c;
   $("#contact-id").disabled = !!c;
   platformFields();
@@ -376,16 +453,17 @@ async function saveBook(book, button) {
     data = await api("/api/contacts", book);
     $("#contact-dialog").close();
     render();
-    toast("Contacts updated");
+    toast(t("Contacts updated"));
   } catch (e) {
-    toast(e.message);
+    toast(t(e.message));
   } finally {
     button.disabled = false;
   }
 }
 $("#contact-form").onsubmit = (event) => {
   event.preventDefault();
-  const platform = $("#contact-platform").value,
+  const selection = $("#contact-platform").value,
+    platform = selection === "grok-group" ? "grok" : selection,
     target = $("#contact-target").value.trim();
   const c = {
     id: $("#contact-id").value.trim(),
@@ -396,14 +474,17 @@ $("#contact-form").onsubmit = (event) => {
       .filter(Boolean),
   };
   if (!c.id.startsWith(platform + ":")) {
-    toast("The address must match the selected platform");
+    toast(t("The address must match the selected platform"));
     return;
   }
   if (platform === "codex") {
     c.threadId = target.replace(/^codex:\/\/threads\//, "").split("?")[0];
     c.cwd = $("#contact-cwd").value.trim();
     c.hostId = "local";
-  } else c.botId = target;
+  } else {
+    c.botId = target;
+    if (selection === "grok-group") c.kind = "group";
+  }
   const book = bookWithout($("#edit-id").value);
   book[platform].push(c);
   saveBook(book, event.submitter);

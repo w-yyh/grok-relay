@@ -1,5 +1,7 @@
 # GrokRelay
 
+<img src="panel/logo.svg" alt="GrokRelay" width="72" height="72" />
+
 **Connect Grok Bot to your existing tools. Starting with Codex Desktop.**
 
 [![CI](https://github.com/w-yyh/grok-relay/actions/workflows/ci.yml/badge.svg)](https://github.com/w-yyh/grok-relay/actions/workflows/ci.yml)
@@ -27,11 +29,13 @@ GrokRelay is a communications layer. It does not replace your agents, create new
 ## What it does
 
 - **Find the right contact.** Stable local addresses and unique aliases map to existing bots and threads.
+- **Register groups explicitly.** Grok group conversations have their own addresses; adding a bot's private chat does not subscribe to its groups.
 - **Send explicit messages.** Use the JSON CLI or a standalone envelope in the original conversation.
 - **Return replies.** Replies are correlated with the destination turn/request, without endless acknowledgment loops.
 - **Stay readable.** A short sender/type header and the message body; queue metadata stays local.
 - **Wait for busy threads.** Persist queued work, reconnect, and avoid blindly retrying uncertain submissions.
 - **Use an optional small interface.** A Wails tray panel, a separate editing window, and on-demand WebViews. No bundled browser or frontend framework.
+- **Choose your language.** English by default; switch to Simplified Chinese in **Settings → Language**. The choice is saved locally, shared by the tray and main window, and does not translate agent messages or contact names.
 
 ## Quick start
 

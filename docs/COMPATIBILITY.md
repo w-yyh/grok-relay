@@ -8,7 +8,7 @@ GrokRelay is an **early Windows preview**. A maintained repository structure doe
 | Grok Bot Desktop | 0.77.0           | Existing-bot messaging and transcript correlation exercised locally      |
 | grok-bot-cli     | 0.12.4           | Used by the Grok adapter; pinned dependency                              |
 | Node.js          | 24.15.0          | Local development and tests                                              |
-| Wails            | 3.0.0-beta.24    | Windows host builds; native interaction acceptance pending               |
+| Wails            | 3.0.0-beta.24    | Native window and language switch exercised; broader acceptance pending  |
 | Go               | 1.27.3           | Local Windows host build                                                 |
 
 ## What has been checked
@@ -17,6 +17,8 @@ GrokRelay is an **early Windows preview**. A maintained repository structure doe
 - Compact headers and reply association were checked against original messages.
 - Busy-thread queuing and restart without duplicate known messages were exercised locally.
 - The web interface's empty state, contact CRUD, start/stop and message submission were exercised.
+- The installed native window, English/Chinese language setting and Windows icon resources were checked locally. Closing windows released their WebView processes while the worker continued running.
+- An explicitly registered Grok group delivered a real envelope into an existing Codex thread; a notice sent back to the group was confirmed in its transcript. Group reply association has automated coverage; broader multi-member workflows remain under trial.
 - Automated tests exercise parsing, Unicode payloads, contact validation, CLI receipts, local HTTP behavior and interrupted IPC requests.
 
 These are development observations, not a guarantee for every installation. No private evidence, customer names or real conversation screenshots are included in this repository.

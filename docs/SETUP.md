@@ -1,5 +1,9 @@
 # Setup
 
+## Group conversations
+
+A Grok Bot private chat and a group containing that bot have separate transcripts. To route messages from a group, register the group itself: `node bridge.cjs discover groups --json`, then **Contacts → Add contact → Grok Bot group**. Use a distinct address such as `grok:research-team`. JSON configurations use the group's ID in `botId` and `kind: "group"`. Replies return to the source group. Registering a bot alone does not subscribe to all of its groups.
+
 ## Requirements
 
 - Windows with Codex Desktop and Grok Bot already installed and signed in.

@@ -16,7 +16,7 @@ function formatMessage(job, lookup) {
 }
 // Older deliveries used a visible ID. New deliveries correlate the actual user
 // message and timestamp in the transcript, without adding IDs to the chat.
-function reconcileIdentities(jobs, contactId, entries) {
+function reconcileIdentities(jobs, contactId, entries, isGroup = false) {
   const used = new Set(
     jobs
       .filter((j) => j.to === contactId && j.requestId)
@@ -26,12 +26,15 @@ function reconcileIdentities(jobs, contactId, entries) {
   for (const entry of [...entries].sort(
     (a, b) => a.timestampMs - b.timestampMs,
   )) {
-    if (
-      entry.kind !== "message" ||
-      !entry.requestId ||
-      used.has(entry.requestId)
-    )
-      continue;
+    // Group user posts have a client nonce and a conversation-turn ID, but no
+    // requestId. Scope replies to that turn, never to the whole group history.
+    const groupTurn =
+      isGroup && /^t[0-9a-z]+u$/.test(entry.id || "")
+        ? entry.id.slice(0, -1)
+        : null;
+    const identity =
+      entry.requestId || (groupTurn ? "group:" + entry.id : null);
+    if (entry.kind !== "message" || !identity || used.has(identity)) continue;
     const body = typeof entry.content === "string" ? entry.content : "";
     const job = jobs.find(
       (j) =>
@@ -44,14 +47,31 @@ function reconcileIdentities(jobs, contactId, entries) {
           : body.includes("\u6d88\u606f\u7f16\u53f7 " + j.id + "\u3011")),
     );
     if (!job) continue;
-    job.requestId = entry.requestId;
+    job.requestId = identity;
+    if (groupTurn) job.groupTurnId = groupTurn;
     if (job.kind === "message") job.status = "waiting_reply";
     else job.status = "delivered";
     job.deliveredAt = new Date(entry.timestampMs).toISOString();
     delete job.error;
-    used.add(entry.requestId);
+    used.add(identity);
     changed.push(job.id);
   }
   return changed;
 }
-module.exports = { displayName, formatMessage, reconcileIdentities };
+function matchesReply(job, entry) {
+  if (job.groupTurnId) {
+    const prefix = job.groupTurnId + "s";
+    return (
+      entry.kind === "send-message" &&
+      entry.id?.startsWith(prefix) &&
+      /^[0-9a-z]+$/.test(entry.id.slice(prefix.length))
+    );
+  }
+  return !!job.requestId && job.requestId === entry.requestId;
+}
+module.exports = {
+  displayName,
+  formatMessage,
+  reconcileIdentities,
+  matchesReply,
+};

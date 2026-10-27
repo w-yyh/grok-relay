@@ -5,21 +5,30 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>GrokRelay</title>
     <link rel="stylesheet" href="/style.css" />
+    <link rel="icon" href="/logo.svg" type="image/svg+xml" />
+    <script src="/i18n.js" defer></script>
     <script src="/app.js" defer></script>
   </head>
   <body>
     <div class="app">
       <header>
         <div class="brand">
-          <span class="brand-icon" aria-hidden="true">⇄</span
-          ><strong>GrokRelay</strong>
+          <img
+            class="brand-icon"
+            src="/logo.svg"
+            width="32"
+            height="32"
+            alt=""
+          /><strong>GrokRelay</strong>
         </div>
         <div class="header-actions">
           <button
             class="icon-button"
             id="open-window"
             title="Open main window"
+            data-i18n-title="Open main window"
             aria-label="Open main window"
+            data-i18n-aria-label="Open main window"
           >
             ↗
           </button>
@@ -27,32 +36,49 @@
             class="icon-button"
             id="refresh"
             title="Refresh"
+            data-i18n-title="Refresh"
             aria-label="Refresh"
+            data-i18n-aria-label="Refresh"
           >
             ↻</button
           ><button
             class="icon-button"
             id="settings-shortcut"
             title="Settings"
+            data-i18n-title="Settings"
             aria-label="Settings"
+            data-i18n-aria-label="Settings"
           >
             ⚙
           </button>
         </div>
       </header>
-      <nav aria-label="Navigation">
-        <button data-tab="activity" class="selected" aria-current="page">
+      <nav aria-label="Navigation" data-i18n-aria-label="Navigation">
+        <button
+          data-tab="activity"
+          class="selected"
+          aria-current="page"
+          data-i18n="Messages"
+        >
           Messages</button
         ><button data-tab="contacts">
-          Contacts <span id="contact-count">0</span></button
-        ><button data-tab="settings">Settings</button>
+          <span data-i18n="Contacts"> Contacts </span
+          ><span id="contact-count">0</span></button
+        ><button data-tab="settings" data-i18n="Settings">Settings</button>
       </nav>
       <main>
         <div class="connection-status">
           <span
             ><i id="status-dot" class="dot"></i
-            ><span id="connection-label">Connecting…</span></span
-          ><button id="toggle-worker" class="text-button" disabled>
+            ><span id="connection-label" data-i18n="Connecting…"
+              >Connecting…</span
+            ></span
+          ><button
+            id="toggle-worker"
+            class="text-button"
+            disabled
+            data-i18n="Start"
+          >
             Start
           </button>
         </div>
@@ -64,7 +90,11 @@
                 ><strong>Codex</strong><small id="codex-count">—</small>
               </div>
               <div class="connector">
-                <span></span><b aria-label="Two-way messaging">⇄</b
+                <span></span
+                ><b
+                  aria-label="Two-way messaging"
+                  data-i18n-aria-label="Two-way messaging"
+                  >⇄</b
                 ><span></span>
               </div>
               <div class="endpoint">
@@ -72,14 +102,21 @@
                 ><strong>Grok Bot</strong><small id="grok-count">—</small>
               </div>
             </div>
-            <div class="route-caption">
+            <div
+              class="route-caption"
+              data-i18n="Existing conversations. Both sides visible."
+            >
               Existing conversations. Both sides visible.
             </div>
           </div>
           <div class="section-heading">
-            <h1>Recent messages <span id="message-count"></span></h1>
+            <h1>
+              <span data-i18n="Recent messages">Recent messages </span
+              ><span id="message-count"></span>
+            </h1>
             <button class="primary small" id="compose">
-              Compose <span aria-hidden="true">↗</span>
+              <span data-i18n="Compose"> Compose </span
+              ><span aria-hidden="true">↗</span>
             </button>
           </div>
           <div class="filters">
@@ -88,25 +125,40 @@
               ><input
                 id="message-search"
                 placeholder="Search messages or contacts"
-                aria-label="Search messages or contacts" /></label
-            ><select id="message-filter" aria-label="Message status">
-              <option value="all">All</option>
-              <option value="pending">Pending</option>
-              <option value="problem">Attention</option>
+                data-i18n-placeholder="Search messages or contacts"
+                aria-label="Search messages or contacts"
+                data-i18n-aria-label="Search messages or contacts" /></label
+            ><select
+              id="message-filter"
+              aria-label="Message status"
+              data-i18n-aria-label="Message status"
+            >
+              <option value="all" data-i18n="All">All</option>
+              <option value="pending" data-i18n="Pending">Pending</option>
+              <option value="problem" data-i18n="Attention">Attention</option>
             </select>
           </div>
           <div id="messages" class="card message-list" aria-live="polite">
-            <div class="empty">Loading messages…</div>
+            <div class="empty" data-i18n="Loading messages…">
+              Loading messages…
+            </div>
           </div>
         </section>
         <section id="contacts" class="view" hidden>
           <div class="section-heading">
-            <h1>Contacts</h1>
-            <button class="primary small" id="add-contact">
+            <h1 data-i18n="Contacts">Contacts</h1>
+            <button
+              class="primary small"
+              id="add-contact"
+              data-i18n="Add contact +"
+            >
               Add contact +
             </button>
           </div>
-          <p class="subtle intro">
+          <p
+            class="subtle intro"
+            data-i18n="Register a contact once. Agents can find it by address."
+          >
             Register a contact once. Agents can find it by address.
           </p>
           <label class="search full"
@@ -114,42 +166,78 @@
             ><input
               id="contact-search"
               placeholder="Search name, address or alias"
+              data-i18n-placeholder="Search name, address or alias"
               aria-label="Search contacts"
+              data-i18n-aria-label="Search contacts"
           /></label>
           <div id="contact-list" class="card"></div>
         </section>
         <section id="settings" class="view" hidden>
-          <div class="section-heading"><h1>Keep communication simple</h1></div>
+          <div class="section-heading">
+            <h1 data-i18n="Keep communication simple">
+              Keep communication simple
+            </h1>
+          </div>
           <div class="card settings-card">
+            <label class="setting-row"
+              ><div>
+                <strong data-i18n="Language">Language</strong>
+                <p data-i18n="Choose the interface language.">
+                  Choose the interface language.
+                </p>
+              </div>
+              <select
+                id="language"
+                aria-label="Language"
+                data-i18n-aria-label="Language"
+              >
+                <option value="en">English</option>
+                <option value="zh-CN">简体中文</option>
+              </select></label
+            >
             <div class="setting-row">
               <div>
-                <strong>Compact messages</strong>
-                <p>Only the sender, message type and body.</p>
+                <strong data-i18n="Compact messages">Compact messages</strong>
+                <p data-i18n="Only the sender, message type and body.">
+                  Only the sender, message type and body.
+                </p>
               </div>
-              <span class="enabled">Enabled</span>
+              <span class="enabled" data-i18n="Enabled">Enabled</span>
             </div>
             <label class="setting-row"
               ><div>
-                <strong>Show service notices</strong>
-                <p>Include setup notices in the message list.</p>
+                <strong data-i18n="Show service notices"
+                  >Show service notices</strong
+                >
+                <p data-i18n="Include setup notices in the message list.">
+                  Include setup notices in the message list.
+                </p>
               </div>
               <input type="checkbox" id="show-notices" role="switch"
             /></label>
             <div class="setting-row">
               <div>
-                <strong>Background relay</strong>
-                <p>
+                <strong data-i18n="Background relay">Background relay</strong>
+                <p
+                  data-i18n="Keep relaying with the window closed. Pause retains the queue."
+                >
                   Keep relaying with the window closed. Pause retains the queue.
                 </p>
               </div>
-              <button id="restart-worker" class="secondary small">
+              <button
+                id="restart-worker"
+                class="secondary small"
+                data-i18n="Reconnect"
+              >
                 Reconnect
               </button>
             </div>
           </div>
           <div class="card settings-card">
-            <h2>How agents connect</h2>
-            <p>
+            <h2 data-i18n="How agents connect">How agents connect</h2>
+            <p
+              data-i18n="Ask an agent to contact a registered address. It emits a standalone envelope in its original conversation."
+            >
               Ask an agent to contact a registered address. It emits a
               standalone envelope in its original conversation.
             </p>
@@ -158,44 +246,64 @@
 Your message
 [[/bridge]]</pre
             >
-            <p>
+            <p
+              data-i18n="Reply normally to an incoming message. To continue after a reply, send a new envelope."
+            >
               Reply normally to an incoming message. To continue after a reply,
               send a new envelope.
             </p>
-            <p class="subtle">
+            <p
+              class="subtle"
+              data-i18n="Only explicit messages are routed. Ordinary chat and quoted examples stay local."
+            >
               Only explicit messages are routed. Ordinary chat and quoted
               examples stay local.
             </p>
           </div>
           <div class="card settings-card">
-            <h2>About GrokRelay <span class="subtle">0.1.0-alpha.1</span></h2>
-            <p>Windows desktop companion · MIT License</p>
-            <p>
+            <h2>
+              <span data-i18n="About GrokRelay">About GrokRelay </span
+              ><span class="subtle">0.1.0-alpha.1</span>
+            </h2>
+            <p data-i18n="Windows desktop companion · MIT License">
+              Windows desktop companion · MIT License
+            </p>
+            <p
+              data-i18n="Connect existing conversations. Each agent keeps its own context and responsibilities. The bridge only delivers messages."
+            >
               Connect existing conversations. Each agent keeps its own context
               and responsibilities. The bridge only delivers messages.
             </p>
             <details>
-              <summary>Runtime and compatibility</summary>
-              <p>
+              <summary data-i18n="Runtime and compatibility">
+                Runtime and compatibility
+              </summary>
+              <p
+                data-i18n="Both desktop apps must be available. Grok is read about every 30 seconds. Busy Codex threads are queued. No startup registration."
+              >
                 Both desktop apps must be available. Grok is read about every 30
                 seconds. Busy Codex threads are queued. No startup registration.
               </p>
-              <p>
+              <p
+                data-i18n="Adapters use internal desktop interfaces and may break after updates. Text and links only; attachments are not transferred."
+              >
                 Adapters use internal desktop interfaces and may break after
                 updates. Text and links only; attachments are not transferred.
               </p>
-              <p>Local data directory</p>
+              <p data-i18n="Local data directory">Local data directory</p>
               <code id="data-dir"></code>
             </details>
           </div>
         </section>
       </main>
       <footer>
-        <span id="last-update">Local connection</span
+        <span id="last-update" data-i18n="Local connection"
+          >Local connection</span
         ><span>GrokRelay <span class="footer-dot">·</span> GrokRelay</span>
         <div class="native-footer">
-          <button id="native-open">Open GrokRelay</button
-          ><button id="native-quit">Quit</button>
+          <button id="native-open" data-i18n="Open GrokRelay">
+            Open GrokRelay</button
+          ><button id="native-quit" data-i18n="Quit">Quit</button>
         </div>
       </footer>
     </div>
@@ -203,93 +311,143 @@ Your message
     <dialog id="compose-dialog">
       <form id="compose-form">
         <div class="dialog-heading">
-          <h2>Compose</h2>
-          <button type="button" class="close icon-button" aria-label="Close">
+          <h2 data-i18n="Compose">Compose</h2>
+          <button
+            type="button"
+            class="close icon-button"
+            aria-label="Close"
+            data-i18n-aria-label="Close"
+          >
             ×
           </button>
         </div>
-        <p class="subtle">
+        <p
+          class="subtle"
+          data-i18n="Send on behalf of the selected contact. Replies return to its original conversation."
+        >
           Send on behalf of the selected contact. Replies return to its original
           conversation.
         </p>
         <div class="form-grid">
-          <label>From<select id="send-from" required></select></label
-          ><label>To<select id="send-to" required></select></label>
+          <label
+            ><span data-i18n="From">From</span
+            ><select id="send-from" required></select></label
+          ><label
+            ><span data-i18n="To">To</span
+            ><select id="send-to" required></select
+          ></label>
         </div>
         <label
-          >Message<textarea
+          ><span data-i18n="Message">Message</span
+          ><textarea
             id="send-text"
             rows="6"
             placeholder="What does the other agent need to know?"
+            data-i18n-placeholder="What does the other agent need to know?"
             required
             maxlength="50000"
           ></textarea>
         </label>
         <p class="subtle" id="compose-note"></p>
         <div class="dialog-actions">
-          <button type="button" class="secondary close">Cancel</button
-          ><button type="submit" class="primary">Send message</button>
+          <button type="button" class="secondary close" data-i18n="Cancel">
+            Cancel</button
+          ><button type="submit" class="primary" data-i18n="Send message">
+            Send message
+          </button>
         </div>
       </form>
     </dialog>
     <dialog id="contact-dialog">
       <form id="contact-form">
         <div class="dialog-heading">
-          <h2 id="contact-title">Add contact</h2>
-          <button type="button" class="close icon-button" aria-label="Close">
+          <h2 id="contact-title" data-i18n="Add contact">Add contact</h2>
+          <button
+            type="button"
+            class="close icon-button"
+            aria-label="Close"
+            data-i18n-aria-label="Close"
+          >
             ×
           </button>
         </div>
         <input id="edit-id" type="hidden" />
         <div class="form-grid">
           <label
-            >Platform<select id="contact-platform">
+            ><span data-i18n="Platform">Platform</span
+            ><select id="contact-platform">
               <option value="codex">Codex</option>
               <option value="grok">Grok Bot</option>
+              <option value="grok-group" data-i18n="Grok Bot group">
+                Grok Bot group
+              </option>
             </select></label
           ><label
-            >Display name<input
+            ><span data-i18n="Display name">Display name</span
+            ><input
               id="contact-name"
               required
               placeholder="Example: Website developer"
+              data-i18n-placeholder="Example: Website developer"
           /></label>
         </div>
         <label
-          >Address<input
+          ><span data-i18n="Address">Address</span
+          ><input
             id="contact-id"
             required
             placeholder="codex:website"
             pattern="(codex|grok):[a-z0-9-]+" /></label
         ><label id="thread-label"
-          >Thread link or ID<input
+          ><span data-i18n="Thread link or ID">Thread link or ID</span
+          ><input
             id="contact-target"
             required
-            placeholder="Paste codex://threads/…" /></label
+            placeholder="Paste codex://threads/…"
+            data-i18n-placeholder="Paste codex://threads/…" /></label
         ><label id="cwd-label"
-          >Workspace path<input
-            id="contact-cwd"
-            placeholder="C:\Projects\website" /></label
+          ><span data-i18n="Workspace path">Workspace path</span
+          ><input id="contact-cwd" placeholder="C:\Projects\website" /></label
         ><label
-          >Aliases <span class="subtle">Optional, comma-separated</span
+          ><span data-i18n="Aliases">Aliases </span
+          ><span class="subtle" data-i18n="Optional, comma-separated"
+            >Optional, comma-separated</span
           ><input id="contact-aliases" placeholder="website, developer"
         /></label>
-        <p class="subtle">
+        <p
+          class="subtle"
+          data-i18n="Saving reconnects the bridge. First registration starts with new messages only. Introduce the address and envelope format to both agents."
+        >
           Saving reconnects the bridge. First registration starts with new
           messages only. Introduce the address and envelope format to both
           agents.
         </p>
         <div class="dialog-actions">
-          <button id="delete-contact" type="button" class="danger" hidden>
+          <button
+            id="delete-contact"
+            type="button"
+            class="danger"
+            hidden
+            data-i18n="Remove contact"
+          >
             Remove contact</button
-          ><button type="button" class="secondary close">Cancel</button
-          ><button type="submit" class="primary">Save contact</button>
+          ><button type="button" class="secondary close" data-i18n="Cancel">
+            Cancel</button
+          ><button type="submit" class="primary" data-i18n="Save contact">
+            Save contact
+          </button>
         </div>
       </form>
     </dialog>
     <dialog id="message-dialog">
       <div class="dialog-heading">
-        <h2 id="detail-title">Message</h2>
-        <button type="button" class="close icon-button" aria-label="Close">
+        <h2 id="detail-title" data-i18n="Message">Message</h2>
+        <button
+          type="button"
+          class="close icon-button"
+          aria-label="Close"
+          data-i18n-aria-label="Close"
+        >
           ×
         </button>
       </div>
@@ -297,8 +455,9 @@ Your message
       <div id="detail-body" class="message-body"></div>
       <p id="detail-error" class="error-text" hidden></p>
       <div class="dialog-actions">
-        <button id="detail-copy" class="secondary">Copy message</button
-        ><button class="primary close">Done</button>
+        <button id="detail-copy" class="secondary" data-i18n="Copy message">
+          Copy message</button
+        ><button class="primary close" data-i18n="Done">Done</button>
       </div>
     </dialog>
   </body>

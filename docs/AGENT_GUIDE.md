@@ -6,6 +6,8 @@ GrokRelay is a local address book and message relay. Use it when the operator wa
 
 The operator installs GrokRelay, registers real contacts and starts the relay. A recipient such as `codex:website` is a local address, not a globally discoverable service. Do not derive IDs from a display name.
 
+**Private chats and groups are separate contacts.** Registering a bot does not subscribe to the groups it belongs to. Use `node bridge.cjs discover groups --json` to identify a group, then register it under a unique `grok:` address with `kind: "group"` and its returned ID in `botId`. Envelopes posted in a registered group are routed from the group; replies return to that same group. An agent saying “sent” is not a transport receipt: check the relay's message record. First registration skips existing history, so resend a missed envelope only after checking it was not already delivered.
+
 Run commands from the installation directory, or use an absolute path to `bridge.cjs`:
 
 ```powershell
