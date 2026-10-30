@@ -3,6 +3,17 @@ const path = require("node:path");
 const { DesktopIpc } = require("./codex-desktop-ipc.cjs");
 const contacts = require("./config.cjs").readContacts();
 const allContacts = [...contacts.codex, ...contacts.grok];
+function reloadContacts() {
+  const next = require("./config.cjs").readContacts();
+  contacts.codex.splice(0, contacts.codex.length, ...next.codex);
+  contacts.grok.splice(0, contacts.grok.length, ...next.grok);
+  allContacts.splice(
+    0,
+    allContacts.length,
+    ...contacts.codex,
+    ...contacts.grok,
+  );
+}
 function findContact(query) {
   const q = query.toLowerCase().trim();
   const exact = allContacts.filter((c) =>
@@ -29,6 +40,16 @@ function directory(query = "") {
 function parseEnvelope(text) {
   const body = String(text).trim();
   if (body === "[[bridge:contacts]]") return { kind: "contacts" };
+  const registration =
+    /^\[\[bridge:register ((?:codex|grok):[a-z0-9-]+)\]\]\s*\n([^\r\n]+)\s*\n\[\[\/bridge\]\]$/.exec(
+      body,
+    );
+  if (registration)
+    return {
+      kind: "register",
+      address: registration[1],
+      name: registration[2].trim(),
+    };
   const match =
     /^\[\[bridge:send ([^\]\r\n]+)\]\]\s*\n([\s\S]*?)\n\[\[\/bridge\]\]$/.exec(
       body,
@@ -88,6 +109,8 @@ class DesktopConnection {
         "thread-owner-discovery",
         { hostId: this.contact.hostId, conversationId: this.contact.threadId },
         1,
+        undefined,
+        10000,
       );
       this.owner = o.handledByClientId;
       this.ipc.listeners.add((m) => {
@@ -138,10 +161,37 @@ class DesktopConnection {
       throw e;
     }
   }
-  async send(text) {
+  async send(text, clientUserMessageId) {
     if (this.problem) throw Error(this.problem);
-    if (this.state?.threadRuntimeStatus?.type !== "idle")
-      throw Error("DESKTOP_BUSY");
+    if (this.state?.threadRuntimeStatus?.type !== "idle") {
+      try {
+        const r = await this.ipc.request(
+          "thread-follower-steer-turn",
+          {
+            conversationId: this.contact.threadId,
+            input: [{ type: "text", text, text_elements: [] }],
+            clientUserMessageId,
+            restoreMessage: {
+              id: clientUserMessageId,
+              text,
+              cwd: this.contact.cwd,
+              context: {},
+            },
+            attachments: [],
+          },
+          1,
+          this.owner,
+        );
+        const id = r.result?.result?.turnId;
+        if (!id) throw Error("Desktop steering result unknown");
+        return id;
+      } catch (error) {
+        // The active turn may finish between reading state and handling steer.
+        // Only this explicit rejection is safe to submit as a fresh turn.
+        if (!/no active turn|not being streamed/i.test(error.message))
+          throw error;
+      }
+    }
     const r = await this.ipc.request(
       "thread-follower-start-turn",
       {
@@ -149,6 +199,7 @@ class DesktopConnection {
         turnStart: {
           request: {
             threadId: this.contact.threadId,
+            clientUserMessageId,
             input: [{ type: "text", text, text_elements: [] }],
           },
           context: { inheritThreadSettings: true },
@@ -178,6 +229,7 @@ class DesktopConnection {
 }
 module.exports = {
   contacts,
+  reloadContacts,
   allContacts,
   findContact,
   directory,

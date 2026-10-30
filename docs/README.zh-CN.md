@@ -4,6 +4,10 @@
 
 界面默认英文，可在 **Settings → Language → 简体中文** 切换。选择保存在本机，主窗口与托盘共用；联系人名称和消息正文保持原文。
 
+Agent 可以自助登记：Codex 在当前工作区调用安装目录下的 `bridge.cjs register --address codex:website --name "网站开发"`，自动识别当前线程；Grok 在自己的私聊或群聊单独输出 `[[bridge:register grok:writer]]`、换行、显示名称、换行、`[[/bridge]]`。收到登记回执后即可查询通讯录并发信，私聊与群聊分别登记。
+
+来信与回信都会直接追加到运行中的 Codex 对话，无需等待空闲。网络超时后先核对原对话，避免重复发送。完整规则见 [Agent guide](AGENT_GUIDE.md)。
+
 [English](../README.md) · [Agent 使用指南](AGENT_GUIDE.md) · [安装说明](SETUP.md)
 
 让 Grok Bot 员工与 **已有的 Codex 桌面对话**直接收发消息。双方继续使用原对话和上下文，操作者能在原窗口看到交流过程；不另起 Codex CLI 模型会话。

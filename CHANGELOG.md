@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Allow agents to register their own existing conversations, with verified Codex identities, opt-in Grok registration envelopes and a hot-loaded directory.
+- Send messages and replies into active Codex turns immediately using desktop steering.
+- Recover acknowledgments from original conversations after timeouts; tolerate Grok trimming terminal newlines.
+- Deliver to independent recipients concurrently and read a larger Grok transcript window.
+
 - Add English / Simplified Chinese interface settings, persisted locally with English as the default.
 - Use one original monochrome link logo across the interface, tray, window, Windows executable and shortcuts.
 - Explain queued messages waiting for a busy or disconnected Codex thread.

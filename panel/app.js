@@ -361,7 +361,9 @@ $("#compose").onclick = () => {
     (c) => c.platform === "Grok Bot",
   );
   $("#compose-note").textContent = data.running
-    ? t("Busy threads are queued. Replies return automatically.")
+    ? t(
+        "Messages enter active conversations immediately. Replies return automatically.",
+      )
     : t("Paused. This message will wait until the bridge is started.");
   $("#compose-dialog").showModal();
 };

@@ -4,6 +4,8 @@ GrokRelay keeps contact identities, queued message bodies, reply associations an
 
 The relay is local, but the conversations are not offline: a sent message goes to the corresponding desktop product and its services using the existing account. GrokRelay adds no cloud relay, analytics or telemetry endpoint.
 
+Self-registration discovery lists bots and groups on the same signed-in Grok account and reads up to 20 recent transcript entries from unregistered conversations to recognize explicit registration envelopes. It does not save those unregistered message bodies or forward ordinary chat. Registered contacts use a larger recent transcript window for routing and delivery reconciliation. A Codex self-registration verifies the caller's thread ID and workspace through the existing desktop connection.
+
 The Windows Grok adapter reads the active desktop account's access token from the desktop's local storage. It uses the current user's DPAPI key to decrypt that token in memory and passes it only to the necessary child transport process. It does not read refresh tokens or save a plaintext token. Run the tool only under the intended signed-in Windows account. The current token-storage format is an internal dependency and may change.
 
 Codex communication uses the existing desktop named pipe. The relay does not modify the application bundle, write conversation databases, operate the Codex UI, or start replacement Codex CLI model sessions.

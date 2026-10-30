@@ -59,6 +59,24 @@ test("old matching messages do not acquire a new delivery", () => {
     [],
   );
 });
+test("Grok trimming terminal newlines does not leave an accepted send unconfirmed", () => {
+  const job = {
+    id: "trim",
+    to: "grok:a",
+    kind: "reply",
+    status: "delivery_unknown",
+    attemptedAt: "2026-01-01T00:00:00Z",
+    wireText: "Codex · Reply\r\n\r\nhello\n",
+  };
+  const entry = {
+    kind: "message",
+    requestId: "r-trim",
+    timestampMs: Date.parse("2026-01-01T00:00:01Z"),
+    content: "Codex · Reply\n\nhello",
+  };
+  assert.deepEqual(reconcileIdentities([job], "grok:a", [entry]), ["trim"]);
+  assert.equal(job.status, "delivered");
+});
 test("reply request is correlated, preventing normal acknowledgments from becoming outgoing work", () => {
   const jobs = [
     {

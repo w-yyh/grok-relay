@@ -59,8 +59,8 @@
     "Connect existing conversations. Each agent keeps its own context and responsibilities. The bridge only delivers messages.":
       "连接现有对话，各 Agent 保留自己的上下文和职责。通讯桥只负责投递消息。",
     "Runtime and compatibility": "运行与兼容性",
-    "Both desktop apps must be available. Grok is read about every 30 seconds. Busy Codex threads are queued. No startup registration.":
-      "两端桌面应用需要可用。约每 30 秒读取一次 Grok；Codex 对话忙碌时排队等待。未设置开机自启。",
+    "Both desktop apps must be available. Active Codex conversations receive messages immediately. Network failures are checked before resending. No startup registration.":
+      "两端桌面应用需要可用。消息会立即追加到正在运行的 Codex 对话；网络异常时先核对原对话再考虑重发。未设置开机自启。",
     "Adapters use internal desktop interfaces and may break after updates. Text and links only; attachments are not transferred.":
       "适配器使用桌面内部接口，应用更新后可能需要适配。目前仅传递文字和链接，不传递附件。",
     "Local data directory": "本地数据目录",
@@ -126,8 +126,8 @@
     Copied: "已复制",
     "Copy failed. Select the text manually.": "复制失败，请手动选择文字复制。",
     "Quitting…": "正在退出…",
-    "Busy threads are queued. Replies return automatically.":
-      "对话忙碌时会排队，回信自动返回。",
+    "Messages enter active conversations immediately. Replies return automatically.":
+      "消息会立即进入正在运行的对话，回信自动返回。",
     "Paused. This message will wait until the bridge is started.":
       "当前已暂停，消息将在通讯桥启动后发送。",
     "Message queued": "消息已加入队列",

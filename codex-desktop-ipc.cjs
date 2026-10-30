@@ -42,6 +42,8 @@ class DesktopIpc {
       "initialize",
       { clientType: "grok-desktop-bridge-probe" },
       0,
+      undefined,
+      5000,
     );
     this.clientId = hello.result.clientId;
     return this;
@@ -75,13 +77,13 @@ class DesktopIpc {
     )
       for (const fn of this.listeners) fn(msg);
   }
-  request(method, params, version, targetClientId) {
+  request(method, params, version, targetClientId, timeoutMs = 60000) {
     const requestId = randomUUID();
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pending.delete(requestId);
         reject(new Error("Request timed out: " + method));
-      }, 15000);
+      }, timeoutMs + 1000);
       this.pending.set(requestId, { resolve, reject, timer });
       this.send({
         type: "request",
@@ -91,7 +93,7 @@ class DesktopIpc {
         method,
         params,
         targetClientId,
-        timeoutMs: 14000,
+        timeoutMs,
       });
     });
   }

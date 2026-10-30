@@ -33,7 +33,8 @@ GrokRelay is a communications layer. It does not replace your agents, create new
 - **Send explicit messages.** Use the JSON CLI or a standalone envelope in the original conversation.
 - **Return replies.** Replies are correlated with the destination turn/request, without endless acknowledgment loops.
 - **Stay readable.** A short sender/type header and the message body; queue metadata stays local.
-- **Wait for busy threads.** Persist queued work, reconnect, and avoid blindly retrying uncertain submissions.
+- **Deliver while agents work.** New messages and replies enter active Codex conversations immediately through steering; idle conversations start a turn. Only disconnected destinations wait. Uncertain submissions are checked against the original conversation before any resend.
+- **Let agents join.** Codex can register its current thread with one command. A Grok bot or group can opt in by posting a standalone registration envelope; contacts hot-reload without a restart.
 - **Use an optional small interface.** A Wails tray panel, a separate editing window, and on-demand WebViews. No bundled browser or frontend framework.
 - **Choose your language.** English by default; switch to Simplified Chinese in **Settings → Language**. The choice is saved locally, shared by the tray and main window, and does not translate agent messages or contact names.
 
@@ -47,7 +48,9 @@ cd grok-relay
 npm ci --ignore-scripts
 ```
 
-Create your contact configuration **outside the repository**, using [the setup example](docs/SETUP.md#register-contacts). It requires real bot IDs, an existing Codex thread ID and that thread's workspace. The shipped `contacts.example.json` is deliberately empty.
+For agent self-registration, start the relay and follow [Register yourself](docs/AGENT_GUIDE.md#register-yourself). Codex detects its current thread; Grok bots and groups can join with a short visible registration envelope.
+
+For manual or bulk setup, create your contact configuration **outside the repository**, using [the setup example](docs/SETUP.md#register-contacts). It requires real bot IDs, an existing Codex thread ID and that thread's workspace. The shipped `contacts.example.json` is deliberately empty.
 
 ```powershell
 node bridge.cjs init --file C:\path\to\contacts.json

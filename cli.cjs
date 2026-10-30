@@ -63,8 +63,20 @@ function metadata(job) {
 }
 function parseOptions(args) {
   const values = {};
-  const flags = new Set(["json", "include-text"]);
-  const valued = new Set(["query", "to", "from", "file", "message", "id"]);
+  const flags = new Set(["json", "include-text", "group"]);
+  const valued = new Set([
+    "query",
+    "to",
+    "from",
+    "file",
+    "message",
+    "id",
+    "address",
+    "name",
+    "thread-id",
+    "cwd",
+    "bot-id",
+  ]);
   for (let i = 0; i < args.length; i++) {
     const key = args[i].replace(/^--/, "");
     if (!args[i].startsWith("--") || (!flags.has(key) && !valued.has(key)))
@@ -119,7 +131,7 @@ async function run(args = process.argv.slice(2)) {
   const output = (value) => console.log(JSON.stringify(value, null, 2));
   if (!command || ["help", "--help", "-h"].includes(command)) {
     console.log(
-      `GrokRelay ${version}\n\nUsage: node bridge.cjs <command> [options]\n\n  init --file FILE                 Register an initial contact configuration\n  contacts [--query TEXT] [--json] Find registered recipients\n  discover grok | groups [--json]  List Grok Bot or group IDs and names\n  doctor [--json]                  Check local prerequisites without reading tokens\n  start | stop | status           Control the relay; JSON output\n  send --to ADDRESS [--from ADDRESS] --file FILE\n  send --to ADDRESS [--from ADDRESS] --message TEXT\n  message --id ID [--include-text] Inspect one message and its replies\n\nOnly explicit messages are forwarded. See docs/AGENT_GUIDE.md.`,
+      `GrokRelay ${version}\n\nUsage: node bridge.cjs <command> [options]\n\n  register --address ADDRESS --name NAME  Join the directory (Codex detects its current thread)\n  init --file FILE                 Register an initial contact configuration\n  contacts [--query TEXT] [--json] Find registered recipients\n  discover grok | groups [--json]  List Grok Bot or group IDs and names\n  doctor [--json]                  Check local prerequisites without reading tokens\n  start | stop | status           Control the relay; JSON output\n  send --to ADDRESS [--from ADDRESS] --file FILE\n  send --to ADDRESS [--from ADDRESS] --message TEXT\n  message --id ID [--include-text] Inspect one message and its replies\n\nOnly explicit messages are forwarded. See docs/AGENT_GUIDE.md.`,
     );
     return;
   }
@@ -130,6 +142,61 @@ async function run(args = process.argv.slice(2)) {
   let discover;
   if (command === "discover") discover = args.shift();
   const options = parseOptions(args);
+  if (command === "register") {
+    if (!livePid()) throw Error("Start GrokRelay before registering a contact");
+    let identity,
+      name = options.name;
+    if (options.address?.startsWith("codex:")) {
+      const threadId = options["thread-id"] || process.env.CODEX_THREAD_ID;
+      if (!threadId)
+        throw Error("Run inside a Codex thread or supply --thread-id");
+      identity = {
+        threadId,
+        cwd: require("node:path").resolve(options.cwd || process.cwd()),
+        hostId: "local",
+      };
+      const connection =
+        await new (require("./communication-core.cjs").DesktopConnection)(
+          identity,
+        ).connect();
+      try {
+        name ||= connection.state.title || connection.state.name;
+      } finally {
+        connection.close();
+      }
+    } else if (options.address?.startsWith("grok:")) {
+      const rows = await require("./grok-existing-session.cjs").grok([
+        options.group ? "groups" : "bots",
+        "list",
+        "--gateway",
+      ]);
+      const matches = rows.filter((row) =>
+        options["bot-id"] ? row.id === options["bot-id"] : row.name === name,
+      );
+      if (matches.length !== 1)
+        throw Error("Choose one exact Grok bot/group name or --bot-id");
+      identity = {
+        botId: matches[0].id,
+        ...(options.group ? { kind: "group" } : {}),
+      };
+      name ||= matches[0].name;
+    } else
+      throw Error(
+        "Use register --address codex:NAME or grok:NAME --name DISPLAY_NAME",
+      );
+    const result = await require("./registration.cjs").requestRegistration(
+      identity,
+      options.address,
+      name,
+    );
+    output({
+      registered: true,
+      added: result.added,
+      address: result.contact.id,
+      name: result.contact.name,
+    });
+    return;
+  }
   if (command === "contacts") {
     const query = (options.query || "").toLowerCase();
     const rows = allContacts.filter((c) =>

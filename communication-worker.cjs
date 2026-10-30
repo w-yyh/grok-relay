@@ -4,6 +4,7 @@ const { randomUUID } = require("node:crypto");
 const { grok } = require("./grok-existing-session.cjs");
 const {
   contacts,
+  reloadContacts,
   allContacts,
   findContact,
   directory,
@@ -18,6 +19,12 @@ const {
   reconcileIdentities,
   matchesReply,
 } = require("./message-format.cjs");
+const { reconcileCodex, nextContactToRead } = require("./delivery.cjs");
+const {
+  registerIdentity,
+  registrationBaseline,
+} = require("./registration.cjs");
+const { contactsFile } = require("./config.cjs");
 const root = require("./config.cjs").stateDir;
 fs.mkdirSync(root, { recursive: true });
 const statePath = path.join(root, "communication.json"),
@@ -42,9 +49,13 @@ const desktops = new Map(),
   nextConnect = new Map(),
   nextPoll = new Map();
 let running = true,
-  lastSave = 0,
-  flushBusy = false,
-  pollBusy = false;
+  lastSave = 0;
+const activePolls = new Set();
+const connecting = new Set();
+const activeDeliveries = new Map();
+let discoveryBusy = false,
+  nextDiscovery = 0,
+  contactStamp = 0;
 function save() {
   state.pid = process.pid;
   state.running = running;
@@ -97,6 +108,14 @@ function handleOutgoing(source, text, key) {
     return;
   }
   if (!command) return;
+  if (command.kind === "register") {
+    notify(
+      source,
+      "Already registered as " + source + ".",
+      "registered:" + key,
+    );
+    return;
+  }
   if (command.kind === "contacts") {
     notify(source, "Available contacts:\n" + directory(), "directory:" + key);
     return;
@@ -138,6 +157,7 @@ function responseTo(job, text, entryId = null) {
 function inspectCodex(contact, d) {
   if (!d.state) return;
   const turns = turnsOf(d.state);
+  if (reconcileCodex(state.jobs, contact.id, turns).length) save();
   if (!state.seen[contact.id]) {
     state.seen[contact.id] = turns
       .filter((t) => t.status === "completed")
@@ -148,45 +168,47 @@ function inspectCodex(contact, d) {
   for (const t of turns) {
     const id = t.turnId || t.id;
     if (!id) continue;
-    const incoming = state.jobs.find(
+    const incomingJobs = state.jobs.filter(
       (j) => j.to === contact.id && j.turnId === id,
     );
-    if (incoming) {
-      if (
-        t.status === "completed" &&
-        incoming.kind !== "message" &&
-        !seen(contact.id, id)
-      ) {
-        handleOutgoing(contact.id, finalOf(t), contact.id + ":" + id);
-        mark(contact.id, id);
-        save();
-      } else if (
-        t.status === "completed" &&
-        incoming.status === "waiting_reply"
-      ) {
-        const text = finalOf(t);
-        if (text) responseTo(incoming, text);
-        else {
-          incoming.status = "completed_without_text";
+    if (incomingJobs.length) {
+      for (const incoming of incomingJobs) {
+        if (
+          t.status === "completed" &&
+          incoming.kind !== "message" &&
+          !seen(contact.id, id)
+        ) {
+          handleOutgoing(contact.id, finalOf(t), contact.id + ":" + id);
+          mark(contact.id, id);
+          save();
+        } else if (
+          t.status === "completed" &&
+          incoming.status === "waiting_reply"
+        ) {
+          const text = finalOf(t);
+          if (text) responseTo(incoming, text);
+          else {
+            incoming.status = "completed_without_text";
+            save();
+          }
+          mark(contact.id, id);
+        } else if (
+          ["failed", "interrupted"].includes(t.status) &&
+          incoming.status === "waiting_reply"
+        ) {
+          incoming.status = t.status;
+          notify(
+            incoming.from,
+            "The turn for " +
+              contact.name +
+              " is " +
+              t.status +
+              ". Check the original conversation.",
+            "failed:" + incoming.id,
+          );
+          mark(contact.id, id);
           save();
         }
-        mark(contact.id, id);
-      } else if (
-        ["failed", "interrupted"].includes(t.status) &&
-        incoming.status === "waiting_reply"
-      ) {
-        incoming.status = t.status;
-        notify(
-          incoming.from,
-          "The turn for " +
-            contact.name +
-            " is " +
-            t.status +
-            ". Check the original conversation.",
-          "failed:" + incoming.id,
-        );
-        mark(contact.id, id);
-        save();
       }
       continue;
     }
@@ -220,72 +242,87 @@ async function connectDesktop(contact) {
     save();
   }
 }
-async function flush() {
-  if (flushBusy) return;
-  flushBusy = true;
+async function deliver(job) {
   try {
-    for (const job of state.jobs.filter((j) => j.status === "queued")) {
-      if (!running) break;
-      const to = findContact(job.to);
-      if (to.threadId) {
-        const d = desktops.get(to.id);
-        if (!d || d.problem) {
-          job.waitReason = "recipient_unavailable";
-          continue;
-        }
-        if (d.state?.threadRuntimeStatus?.type !== "idle") {
-          job.waitReason = "recipient_busy";
-          continue;
-        }
+    const to = findContact(job.to);
+    if (to.threadId) {
+      const d = desktops.get(to.id);
+      if (!d || d.problem) {
+        job.waitReason = "recipient_unavailable";
+        return;
       }
-      delete job.waitReason;
-      job.status = "sending";
-      job.attemptedAt = new Date().toISOString();
-      job.wireText = messageText(job);
-      save();
-      try {
-        if (to.threadId) {
-          job.turnId = await desktops.get(to.id).send(messageText(job));
-        } else {
-          const r = await grok([
-            "send",
-            to.botId,
-            messageText(job),
-            "--gateway",
-            "--reply-mode",
-            "manual",
-            "--no-history",
-          ]);
-          job.requestId =
-            r.requestId || r.result?.requestId || r.receipt?.requestId;
-          job.transportAccepted =
-            r.result?.accepted === true || r.delivery === "accepted";
-          job.receiptKeys = Object.keys(r);
-        }
+    }
+    delete job.waitReason;
+    job.status = "sending";
+    job.clientMessageId ||= randomUUID();
+    job.attemptedAt = new Date().toISOString();
+    job.wireText = messageText(job);
+    save();
+    try {
+      if (to.threadId) {
+        job.turnId = await desktops
+          .get(to.id)
+          .send(messageText(job), job.clientMessageId);
+      } else {
+        const r = await grok([
+          "send",
+          to.botId,
+          messageText(job),
+          "--gateway",
+          "--reply-mode",
+          "manual",
+          "--no-history",
+        ]);
+        job.requestId =
+          r.requestId || r.result?.requestId || r.receipt?.requestId;
+        job.transportAccepted =
+          r.result?.accepted === true || r.delivery === "accepted";
+        job.receiptKeys = Object.keys(r);
+      }
+      if (job.status === "sending")
         job.status =
           to.botId && !job.requestId
             ? "waiting_identity"
             : job.kind === "message"
               ? "waiting_reply"
               : "delivered";
-        job.deliveredAt = new Date().toISOString();
-        save();
-        log("delivered", {
-          id: job.id,
-          to: job.to,
-          kind: job.kind,
-          turnId: job.turnId,
-        });
-        if (to.threadId) inspectCodex(to, desktops.get(to.id));
-      } catch (e) {
+      job.deliveredAt ||= new Date().toISOString();
+      save();
+      log("delivered", {
+        id: job.id,
+        to: job.to,
+        kind: job.kind,
+        turnId: job.turnId,
+      });
+      if (to.threadId) inspectCodex(to, desktops.get(to.id));
+    } catch (e) {
+      if (job.status === "sending") {
         job.status = "delivery_unknown";
         job.error = e.message;
-        save();
-        log("delivery_unknown", { id: job.id, error: e.message });
       }
+      save();
+      log("delivery_unknown", { id: job.id, error: e.message });
+      if (to.threadId) {
+        const d = desktops.get(to.id);
+        if (d) {
+          inspectCodex(to, d);
+          if (job.status === "delivery_unknown")
+            d.problem = "Refresh after unconfirmed submission";
+        }
+      } else nextPoll.set(to.id, 0);
     }
   } finally {
-    flushBusy = false;
+    save();
+  }
+}
+function flush() {
+  for (const job of state.jobs.filter((j) => j.status === "queued")) {
+    if (!running || activeDeliveries.size >= 3) break;
+    if (activeDeliveries.has(job.to)) continue;
+    const task = deliver(job)
+      .catch((e) => log("delivery_error", { id: job.id, error: e.message }))
+      .finally(() => activeDeliveries.delete(job.to));
+    activeDeliveries.set(job.to, task);
   }
 }
 async function pollGrok(contact) {
@@ -295,19 +332,28 @@ async function pollGrok(contact) {
       contact.botId,
       "--gateway",
       "--limit",
-      "80",
+      "200",
       "--no-history",
     ]);
     if (r.target?.id !== contact.botId) throw Error("Bot identity mismatch");
     const entries = r.transcript?.entries || [];
+    for (const job of state.jobs.filter(
+      (j) =>
+        j.to === contact.id &&
+        ["waiting_identity", "delivery_unknown"].includes(j.status),
+    ))
+      job.deliveryCheckedAt = new Date().toISOString();
     state.routes[contact.id] = {
       status: "online",
       lastReadAt: new Date().toISOString(),
     };
     if (!state.seen[contact.id]) {
-      state.seen[contact.id] = entries.map((e) => e.id);
+      state.seen[contact.id] = registrationBaseline(
+        entries,
+        contact.registeredAt,
+      );
       save();
-      return;
+      if (!contact.registeredAt) return;
     }
     for (const id of reconcileIdentities(
       state.jobs,
@@ -351,7 +397,119 @@ async function pollGrok(contact) {
     save();
     log("grok_unavailable", { id: contact.id, error: e.message });
   } finally {
-    nextPoll.set(contact.id, Date.now() + 30000);
+    nextPoll.set(
+      contact.id,
+      Date.now() +
+        (state.routes[contact.id]?.status === "online" ? 10000 : 60000),
+    );
+  }
+}
+
+function refreshDirectory() {
+  const stamp = fs.existsSync(contactsFile)
+    ? fs.statSync(contactsFile).mtimeMs
+    : 0;
+  if (stamp === contactStamp) return;
+  reloadContacts();
+  contactStamp = stamp;
+  for (const [id, connection] of desktops)
+    if (!contacts.codex.some((c) => c.id === id)) {
+      connection.close();
+      desktops.delete(id);
+    }
+}
+function registrationInbox() {
+  const dir = path.join(root, "registrations");
+  fs.mkdirSync(dir, { recursive: true });
+  for (const name of fs.readdirSync(dir).filter((n) => n.endsWith(".json"))) {
+    const file = path.join(dir, name);
+    let result;
+    try {
+      const item = JSON.parse(fs.readFileSync(file, "utf8"));
+      result = registerIdentity(item.identity, item.address, item.name);
+      refreshDirectory();
+    } catch (e) {
+      result = { error: e.message };
+    }
+    const out = file.replace(/\.json$/, ".result");
+    fs.writeFileSync(out + ".tmp", JSON.stringify(result));
+    fs.renameSync(out + ".tmp", out);
+    fs.unlinkSync(file);
+  }
+}
+async function discoverRegistrations() {
+  if (discoveryBusy || Date.now() < nextDiscovery) return;
+  discoveryBusy = true;
+  nextDiscovery = Date.now() + 60000;
+  try {
+    const rows = (
+      await Promise.all([
+        grok(["bots", "list", "--gateway"]),
+        grok(["groups", "list", "--gateway"]),
+      ])
+    ).flat();
+    for (const row of rows) {
+      if (!running || contacts.grok.some((c) => c.botId === row.id)) continue;
+      try {
+        const tail = await grok([
+          "thread",
+          row.id,
+          "--gateway",
+          "--limit",
+          "20",
+          "--no-history",
+        ]);
+        if (tail.target?.id !== row.id) continue;
+        for (const entry of tail.transcript?.entries || []) {
+          if (entry.kind !== "send-message") continue;
+          if (
+            !String(entry.message?.content || "")
+              .trim()
+              .startsWith("[[bridge:register ")
+          )
+            continue;
+          const command = parseEnvelope(entry.message?.content);
+          if (
+            command?.kind !== "register" ||
+            !command.address.startsWith("grok:")
+          )
+            continue;
+          const result = registerIdentity(
+            {
+              botId: row.id,
+              ...(row.kind === "group" || tail.target.isGroup
+                ? { kind: "group" }
+                : {}),
+            },
+            command.address,
+            command.name,
+          );
+          refreshDirectory();
+          // Baseline prevents registering a conversation from replaying old work.
+          state.seen[result.contact.id] = (tail.transcript.entries || [])
+            .slice(0, tail.transcript.entries.indexOf(entry) + 1)
+            .map((e) => e.id);
+          notify(
+            result.contact.id,
+            "Registered as " +
+              result.contact.id +
+              ". Send [[bridge:contacts]] to check the directory.",
+            "registered:" + row.id + ":" + entry.id,
+          );
+          save();
+          break;
+        }
+      } catch (e) {
+        log("registration_contact_unavailable", {
+          id: row.id,
+          error: e.message,
+        });
+      }
+    }
+  } catch (e) {
+    log("registration_discovery_failed", { error: e.message });
+  } finally {
+    discoveryBusy = false;
   }
 }
 const inbox = path.join(root, "inbox");
@@ -382,31 +540,37 @@ process.on("SIGTERM", () => {
   save();
   try {
     while (running && !fs.existsSync(stopPath)) {
+      refreshDirectory();
+      registrationInbox();
+      void discoverRegistrations();
       ingest();
       for (const c of contacts.codex) {
         const d = desktops.get(c.id);
-        if (!d || d.problem) await connectDesktop(c);
-        else inspectCodex(c, d);
+        if ((!d || d.problem) && !connecting.has(c.id)) {
+          connecting.add(c.id);
+          connectDesktop(c).finally(() => connecting.delete(c.id));
+        } else if (d && !d.problem) inspectCodex(c, d);
       }
-      if (!pollBusy) {
-        const c = contacts.grok.find(
-          (c) => Date.now() >= (nextPoll.get(c.id) || 0),
-        );
-        if (c) {
-          pollBusy = true;
-          pollGrok(c).finally(() => {
-            pollBusy = false;
-          });
-        }
+      while (activePolls.size < 2) {
+        const c = nextContactToRead(contacts.grok, nextPoll, activePolls);
+        if (!c) break;
+        activePolls.add(c.id);
+        pollGrok(c).finally(() => activePolls.delete(c.id));
       }
-      await flush();
+      flush();
       if (Date.now() - lastSave > 10000) save();
       await new Promise((r) => setTimeout(r, 500));
     }
   } finally {
     running = false;
+    while (
+      activePolls.size ||
+      discoveryBusy ||
+      activeDeliveries.size ||
+      connecting.size
+    )
+      await new Promise((r) => setTimeout(r, 100));
     for (const d of desktops.values()) d.close();
-    while (pollBusy || flushBusy) await new Promise((r) => setTimeout(r, 100));
     save();
     if (
       fs.existsSync(lockPath) &&

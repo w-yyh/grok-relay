@@ -27,6 +27,8 @@
     "config.cjs",
     "codex-desktop-ipc.cjs",
     "communication-core.cjs",
+    "delivery.cjs",
+    "registration.cjs",
     "communication-worker.cjs",
     "message-format.cjs",
     "grok-existing-session.cjs",

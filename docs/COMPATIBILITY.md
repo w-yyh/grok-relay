@@ -31,7 +31,7 @@ Native tray expand/collapse, lifecycle after repeated opens, different DPI setti
 
 - Windows only. Existing local Codex thread owners must be available; there is no remote-host routing.
 - Text and links only; attachments are not transferred.
-- Grok is polled about every 30 seconds, with up to 80 recent entries read per poll. Long offline periods or high message volume can exceed that window; full historical backfill is not guaranteed.
+- Grok reads are scheduled 10 seconds after successful reads, with up to 200 recent entries per contact. Account scheduling and network latency extend this interval. Unregistered bots/groups are checked about once per minute for explicit registration only. Long offline periods or high message volume can exceed the transcript window; full historical backfill is not guaranteed.
 - The first connection establishes a baseline, rather than forwarding old messages.
 - Uncertain sends are not retried automatically. A returned reply may be progress, not task completion.
 - The panel displays the latest 200 jobs. Persistent state has no automatic retention policy yet.

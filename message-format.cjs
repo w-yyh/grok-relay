@@ -2,6 +2,11 @@
 function displayName(contact) {
   return contact.shortName || contact.name.split(/[（｜|]/)[0].trim();
 }
+function normalizedText(value) {
+  return String(value || "")
+    .replace(/\r\n/g, "\n")
+    .trimEnd();
+}
 function formatMessage(job, lookup) {
   if (job.kind === "notice") return "GrokRelay\n\n" + job.text;
   const from =
@@ -43,7 +48,7 @@ function reconcileIdentities(jobs, contactId, entries, isGroup = false) {
         j.attemptedAt &&
         entry.timestampMs >= Date.parse(j.attemptedAt) - 2000 &&
         (j.wireText
-          ? body === j.wireText
+          ? normalizedText(body) === normalizedText(j.wireText)
           : body.includes("\u6d88\u606f\u7f16\u53f7 " + j.id + "\u3011")),
     );
     if (!job) continue;
@@ -74,4 +79,5 @@ module.exports = {
   formatMessage,
   reconcileIdentities,
   matchesReply,
+  normalizedText,
 };

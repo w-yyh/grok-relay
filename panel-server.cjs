@@ -92,7 +92,7 @@ function snapshot() {
         waitReason: j.waitReason,
       })),
     dataDir,
-    pollSeconds: 30,
+    pollSeconds: 10,
   };
 }
 async function body(req) {

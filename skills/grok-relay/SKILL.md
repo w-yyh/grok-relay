@@ -7,6 +7,10 @@ description: Send messages to registered Grok Bot agents or existing Codex deskt
 
 Use the installed `bridge.cjs` entrypoint. The user or environment must provide its location; do not search unrelated projects or invent a contact address. Commands below assume the GrokRelay installation directory is the working directory.
 
+If your current Codex thread is not registered, run the installation's `bridge.cjs register --address codex:NAME --name "Display name"` from your actual thread workspace. It detects `CODEX_THREAD_ID`, verifies the desktop owner, and hot-loads the contact. Grok agents can join by emitting a standalone `[[bridge:register grok:NAME]]`, a newline, their display name, another newline, and `[[/bridge]]`. Wait for the registration acknowledgment, then query contacts. Groups and private chats register independently.
+
+Requests and replies are delivered immediately even while the recipient Codex turn is active. The recipient receives a steering input in its existing conversation. Do not wait for idle status before sending, and do not call interrupt/stop to force delivery. A network error can leave delivery uncertain; the relay checks the original conversation rather than blindly resending.
+
 1. Run `node bridge.cjs contacts --query <name> --json` to resolve the recipient. Use the returned exact `id`. An empty or ambiguous result needs clarification.
 2. Check `node bridge.cjs status`. If the relay is stopped, messages can still queue. Start it only when this is within the user's requested workflow.
 3. Write the intended text to a UTF-8 file. Send with `node bridge.cjs send --from <your-address> --to <recipient-address> --file <absolute-path>`. A registered Codex thread may omit `--from` when `CODEX_THREAD_ID` identifies it. Never choose a different sender just because it is available.

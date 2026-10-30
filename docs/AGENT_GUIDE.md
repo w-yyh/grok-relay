@@ -4,6 +4,28 @@ GrokRelay is a local address book and message relay. Use it when the operator wa
 
 ## Before sending
 
+### Register yourself
+
+In an existing Codex conversation with shell access:
+
+```powershell
+node bridge.cjs register --address codex:website --name "Website developer"
+```
+
+Run from the actual thread workspace, using the installation's absolute `bridge.cjs` path when needed. `CODEX_THREAD_ID` and the current directory identify the thread; the relay verifies it against the existing desktop owner. Explicit `--thread-id` and `--cwd` are available to an operator. This is a small messaging command, not a new Codex model session.
+
+A Grok bot without access to the user's filesystem can post this as a standalone visible message:
+
+```text
+[[bridge:register grok:writer]]
+Writer
+[[/bridge]]
+```
+
+The running relay checks same-account bots and groups for registration envelopes roughly once per minute. It derives the real conversation ID from the transcript, replies with the registered address, and only then forwards subsequent send envelopes. Group posts register that group, not the author's private chat. Repeat registration returns the existing address; it never replaces another contact. Wait for the registration acknowledgment, then send `[[bridge:contacts]]` and your message. Ordinary messages in unregistered conversations are not forwarded.
+
+An operator can also use `register --address grok:writer --name "Writer"` with an exact discovered bot name, or add `--group` for a group. When names are ambiguous, supply `--bot-id`. The relay must be running. Contacts are reloaded without restarting it.
+
 The operator installs GrokRelay, registers real contacts and starts the relay. A recipient such as `codex:website` is a local address, not a globally discoverable service. Do not derive IDs from a display name.
 
 **Private chats and groups are separate contacts.** Registering a bot does not subscribe to the groups it belongs to. Use `node bridge.cjs discover groups --json` to identify a group, then register it under a unique `grok:` address with `kind: "group"` and its returned ID in `botId`. Envelopes posted in a registered group are routed from the group; replies return to that same group. An agent saying “sent” is not a transport receipt: check the relay's message record. First registration skips existing history, so resend a missed envelope only after checking it was not already delivered.
@@ -85,7 +107,7 @@ Registered unique aliases also work, but exact addresses are preferable. Only on
 | `failed`, `interrupted`  | Codex reported an unsuccessful/interrupted turn       | Inspect the original thread                    |
 | `completed_without_text` | Turn ended without a final text response              | Inspect the original thread                    |
 
-Grok is normally polled about every 30 seconds, and network waits can extend this. Do not use rapid polling. Long tasks should use a cadence appropriate to their expected duration. This tool does not automatically wake another independent assistant unless a message is actually delivered into that assistant's supported conversation.
+Grok contacts are scheduled for polling 10 seconds after each successful read; serial account reads and network waits can extend this. Failed reads back off. Active Codex conversations receive both requests and replies immediately through the desktop's steering interface. If several requests enter one active turn, its final answer can be returned to each initiating conversation; the relay does not invent separate completions. Only unavailable destinations remain queued. This tool does not automatically wake another independent assistant unless a message is actually delivered into that assistant's supported conversation.
 
 Commands exit `0` on success and `1` on failure. Errors are JSON on stderr. `doctor` exits `1` when a prerequisite is missing while still returning its report on stdout. `stop` acknowledges a stop request; an in-flight read can take up to roughly a minute to finish.
 
